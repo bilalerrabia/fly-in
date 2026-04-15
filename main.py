@@ -1,16 +1,6 @@
 import sys
 import pygame
-
-class Hub:
-    def __init__(self, name: str, x: int, y: int, color: str, zone: str, max_drones: int):
-        self.name = name
-        self.x = x
-        self.y = y
-        self.color = color
-        self.zone = zone
-        self.max_drones = max_drones
-    def __repr__(self):
-        return f"name={self.name} color={self.color} zone={self.zone} x={self.x} y={self.y} max_drones={self.max_drones}"
+from classes import Hub, Graph, Edge
 
 hubs: list[Hub] = []
 connections: list[tuple[str, str]] = []
@@ -68,16 +58,11 @@ def main():
                     line.split()[1].split("-")[1]
                 )
             )
-    for hub in hubs:
-        print(hub.color)
-    for connection in connections:
-        print(connection)
 
-    # print(hubs)
-    # print(connections)
     colors = {
     "black" : (0, 0, 0),
     "gray" : (127, 127, 127),
+    "background" : (0, 204, 204),
     "white" : (255, 255, 255),
     "crimson" : (220, 20, 60),
     "red" : (255, 0, 0),
@@ -94,41 +79,69 @@ def main():
     "crimson" : (220, 20, 60),
     "yellow" : (255, 255, 0)
     }
-    # background = pygame.image.load("ana.jpg")
-    width, height = 1500, 1000
+    background = pygame.image.load("ana.jpg")
+    width, height = 1700, 1000
     # width, height = background.get_size()
     window = pygame.display.set_mode((width, height))
-    # background = pygame.transform.scale(background, (1000, 1000))
-    window.fill(colors["gray"])
+    def get_hub(name, hubs):
+        for hub in hubs:
+            if hub.name == name:
+                return hub
+    # background = pygame.transform.scale(background, (width, height))
+    # window.blit(background, (0, 0))
+
+    window.fill(colors["background"])
     pygame.display.set_caption("fly-in okda ajmi chkt3raf")
+
+    avg_x = sum(h.x for h in hubs) / len(hubs)
+    avg_y = sum(h.y for h in hubs) / len(hubs)
+
+    for hub in hubs:
+        x = width // 2 + (hub.x - avg_x) * 60
+        y = height // 2 + (hub.y - avg_y) * 160
+        hub.position_on_window = (x, y)
+
+    for connection in connections:
+        # print(hubs)
+        if get_hub(connection[0], hubs).zone == "blocked":
+            color = colors["red"]
+        elif get_hub(connection[0], hubs).zone == "priority":
+            color = colors["green"]
+        elif get_hub(connection[0], hubs).zone == "restricted":
+            color = colors["darkred"]
+        else:
+            color = colors["white"]
+        
+        pygame.draw.line(
+            window, color,
+            get_hub(connection[0], hubs).position_on_window,
+            get_hub(connection[1], hubs).position_on_window,
+            width=3
+        )
+
+    for hub in hubs:
+        if hub.color == "none" or hub.color not in colors:
+            pygame.draw.circle(window, colors["green"], (hub.position_on_window[0], hub.position_on_window[1]), 20)
+        else:
+            pygame.draw.circle(window, colors[hub.color], (hub.position_on_window[0], hub.position_on_window[1]), 20)
+        # print(hub.position_on_window(0), hub.position_on_window(1))
+        # print(hub.position_on_window)
+        # pygame.display.update()
+
+    pygame.display.update()
+
     run = True
     while run:
-        # 1. Handle events
+
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 run = False
-        # window.blit(background, (0, 0))
-        # 3. Draw everything
-        for hub in hubs:
-            print(hub)
-            avg_x = sum(h.x for h in hubs) / len(hubs)
-            avg_y = sum(h.y for h in hubs) / len(hubs)
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_DELETE:
+                    run = False
 
-            window.fill(colors["gray"])
+    
 
-            for hub in hubs:
-                x = width // 2 + (hub.x - avg_x) * 100
-                y = height // 2 + (hub.y - avg_y) * 100
-
-                if hub.color == "none" or hub.color not in colors:
-                    pygame.draw.circle(window, colors["green"], (int(x), int(y)), 30)
-                else:
-                    pygame.draw.circle(window, colors[hub.color], (int(x), int(y)), 30)
-
-            pygame.display.update()
-    # print(len(hubs), "ff")
-    for hub in hubs:
-        print(hub.color)
     print(len(hubs))
 if __name__ == "__main__":
     main()
