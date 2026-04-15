@@ -1,9 +1,24 @@
 import sys
 import pygame
+import math
 from classes import Hub, Graph, Edge
 
 hubs: list[Hub] = []
 connections: list[tuple[str, str]] = []
+
+def get_cost(hub: Hub):
+    if hub.zone == "blocked":
+        return math.inf
+    elif hub.zone == "normal" or hub.zone == "priority":
+        return 1
+    elif hub.zone == "restricted":
+        return 2
+
+def get_hub(name, hubs):
+    for hub in hubs:
+        if hub.name == name:
+            return hub
+
 def main():
     global hubs
     try:
@@ -83,10 +98,7 @@ def main():
     width, height = 1700, 1000
     # width, height = background.get_size()
     window = pygame.display.set_mode((width, height))
-    def get_hub(name, hubs):
-        for hub in hubs:
-            if hub.name == name:
-                return hub
+
     # background = pygame.transform.scale(background, (width, height))
     # window.blit(background, (0, 0))
 
@@ -140,7 +152,53 @@ def main():
                 if event.key == pygame.K_DELETE:
                     run = False
 
-    
+    graph = Graph()
+
+    # for connection in connections:
+    #     hub: Hub = get_hub(connection[0], hubs)
+
+    #     if graph.nodes.get(hub, None) == None:
+    #         node = get_hub(connection[1], hubs)
+    #         edge = Edge(get_cost(node), node)
+    #         graph.nodes[hub] = [edge]
+    #     else:
+    #         node = get_hub(connection[1], hubs)
+    #         edge = Edge(get_cost(node), node)
+    #         graph.nodes[hub].append(edge)
+
+    def is_there(name: str, list_hubs : list[Edge]):
+        for edge in list_hubs:
+            if name == edge.target.name:
+                return True
+        return False
+
+
+    def add_edge(graph: Graph, hub1: Hub, hub2: Hub):
+        if graph.nodes.get(hub1, None) == None:
+            edge = Edge(get_cost(hub2), hub2)
+            graph.nodes[hub1] = [edge]
+        else:
+            edge = Edge(get_cost(hub2), hub2)
+            if not is_there(hub2.name, graph.nodes[hub1]):
+                graph.nodes[hub1].append(edge)
+
+    for hub in hubs:
+        for connection in connections:
+            if hub.name == connection[0]:
+                add_edge(graph, hub, get_hub(connection[1], hubs))
+                add_edge(graph, get_hub(connection[1], hubs), hub)
+                # (hub, [connection[1]]) 
+                # (connection[1], [hub])
+            elif hub.name == connection[1]:
+                add_edge(graph, hub, get_hub(connection[0], hubs))
+                add_edge(graph, get_hub(connection[0], hubs), hub)
+                # (hub, [connection[0]])
+                # (connection[0], [hub])
+    for key, value in graph.nodes.items():
+        graph.nodes[key] = list(set(value))
+        # i = list(set(i))
+
+    print(graph)
 
     print(len(hubs))
 if __name__ == "__main__":
