@@ -61,19 +61,20 @@ The current implementation uses a centralized, turn-based scheduler.
 ### 1. Graph construction
 The map is parsed into a graph where each hub becomes a node and each connection becomes a bidirectional edge. Connection capacities are stored separately so the scheduler can reserve and release them during the simulation.
 
-### 2. Distance heuristic
-`ScoreBasedRouter` builds a reverse distance map from every hub to the target hub. That distance map gives the scheduler a stable notion of which moves actually move the drone closer to the goal.
+### 2. Shortest-path recomputation
+Each idle drone recomputes its shortest path from the current hub to the target hub on every turn. The final move choice is then filtered through a static shortest-distance map, which rejects dead-end hubs and keeps the drone moving toward the target.
 
 ### 3. Next-move selection
-For each idle drone, the router checks the neighboring hubs and filters out invalid moves such as blocked zones or hubs/links that are already full.
+The scheduler then tries to launch drones in turn order. It checks the current shortest-path candidates, keeps only the three best next hubs, filters out dead-end routes, rejects blocked or full destinations, reserves the connection, and prints exactly one movement line for the turn.
 
 The decision rule is intentionally simple:
 - prefer the next hub with the smallest remaining distance to the target
-- use the score only as a tie-breaker
-- penalize revisits so drones do not loop unnecessarily
-- if no move improves the current situation, the drone waits
+- respect hub capacity and connection capacity before launching a move
+- only move when one of the top three shortest candidates is available and still has a real route to the target
+- reserve restricted zones across turns so they cannot be overbooked
+- if no move is possible, the drone waits
 
-This keeps the behavior deterministic and prevents the drones from taking random detours.
+This keeps the behavior deterministic and prevents the drones from taking random detours while still adapting to the live turn state.
 
 ### 4. Turn scheduling
 The simulation runs in discrete turns.

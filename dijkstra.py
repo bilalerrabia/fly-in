@@ -25,7 +25,9 @@ def djikstra(graph, start_hub, target_hub, cost_func=None):
         visited[removed_hub] = True
         if removed_hub == target_hub:
             break
-        for edge in graph.nodes[removed_hub]:
+        for edge in graph.nodes.get(removed_hub, []):
+            if not graph.edge_available(removed_hub, edge.target):
+                continue
             if visited[edge.target]:
                 continue
             target_cost = cost_func(edge.target)
