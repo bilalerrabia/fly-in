@@ -1,43 +1,63 @@
-import sys
-import pygame
-from time import sleep
 import math
+import sys
+from time import sleep
+import pygame
 
-from some_parameters import colors
-from classes import Hub, Graph, Edge, Drone
-from dijkstra import djikstra
+from classes import Drone, Edge, Graph, Hub
 from draw_flags import draw_flags
+from hub_scoring_router import ScoreBasedRouter
+from some_parameters import colors
+from parsing import parsing
 
-def get_hub(name, hubs):
+
+def get_hub(name: str, hubs: list[Hub]) -> Hub:
     for hub in hubs:
         if hub.name == name:
             return hub
+    raise ValueError(f"hub not found: {name}")
 
 
-def is_there(name: str, list_hubs: list[Edge]):
+def is_there(name: str, list_hubs: list[Edge]) -> bool:
     for edge in list_hubs:
         if name == edge.target.name:
             return True
     return False
 
 
-def add_edge(graph: Graph, hub1: Hub, hub2: Hub):
+def add_edge(graph: Graph, hub1: Hub, hub2: Hub, capacity: int = 1) -> None:
+    graph.add_link(hub1, hub2, capacity)
     if graph.nodes.get(hub1, None) is None:
-        edge = Edge(hub2.cost, hub2)
+        edge = Edge(hub2.cost, hub2, capacity)
         graph.nodes[hub1] = [edge]
     else:
-        edge = Edge(hub2.cost, hub2)
+        edge = Edge(hub2.cost, hub2, capacity)
         if not is_there(hub2.name, graph.nodes[hub1]):
             graph.nodes[hub1].append(edge)
 
-def draw_hubs(window, hubs):
+
+def draw_hubs(window: pygame.Surface, hubs: list[Hub]) -> None:
     for hub in hubs:
         if hub.color == "none" or hub.color not in colors:
-            pygame.draw.circle(window, colors["green"], (hub.position_on_window[0], hub.position_on_window[1]), 20)
+            pygame.draw.circle(
+                window,
+                colors["green"],
+                (hub.position_on_window[0], hub.position_on_window[1]),
+                20,
+            )
         else:
-            pygame.draw.circle(window, colors[hub.color], (hub.position_on_window[0], hub.position_on_window[1]), 20)
+            pygame.draw.circle(
+                window,
+                colors[hub.color],
+                (hub.position_on_window[0], hub.position_on_window[1]),
+                20,
+            )
 
-def draw_connections(window, connections, hubs):
+
+def draw_connections(
+    window: pygame.Surface,
+    connections: list[tuple[str, str, int]],
+    hubs: list[Hub],
+) -> None:
     for connection in connections:
         if get_hub(connection[0], hubs).zone == "blocked":
             color = colors["red"]
@@ -47,184 +67,236 @@ def draw_connections(window, connections, hubs):
             color = colors["darkred"]
         else:
             color = colors["white"]
-        
+
         pygame.draw.line(
-            window, color,
+            window,
+            color,
             get_hub(connection[0], hubs).position_on_window,
             get_hub(connection[1], hubs).position_on_window,
-            width=3
+            width=3,
         )
 
-def build_the_graph(graph: Graph, hubs: list, connections: list):
-    for hub in hubs:
-        for connection in connections:
-            if hub.name == connection[0]:
-                add_edge(graph, hub, get_hub(connection[1], hubs))
-                add_edge(graph, get_hub(connection[1], hubs), hub)
 
-            elif hub.name == connection[1]:
-                add_edge(graph, hub, get_hub(connection[0], hubs))
-                add_edge(graph, get_hub(connection[0], hubs), hub)
+def init_the_graph(
+    graph: Graph,
+    hubs: list[Hub],
+    connections: list[tuple[str, str, int]],
+) -> None:
+    for connection in connections:
+        hub1 = get_hub(connection[0], hubs)
+        hub2 = get_hub(connection[1], hubs)
+        capacity = connection[2]
+        add_edge(graph, hub1, hub2, capacity)
+        add_edge(graph, hub2, hub1, capacity)
 
-def main():
 
-    # parsing dyal l3bar
+def hub_midpoint(hub1: Hub, hub2: Hub) -> tuple[float, float]:
+    return (
+        (hub1.position_on_window[0] + hub2.position_on_window[0]) / 2,
+        (hub1.position_on_window[1] + hub2.position_on_window[1]) / 2,
+    )
+
+
+def is_drone_movable(drone: Drone) -> bool:
+    return not drone.reach_target and not drone.in_transit
+
+
+def lerp_position(
+    start: tuple[float, float],
+    end: tuple[float, float],
+    progress: float,
+) -> tuple[float, float]:
+    return (
+        start[0] + (end[0] - start[0]) * progress,
+        start[1] + (end[1] - start[1]) * progress,
+    )
+
+
+def main() -> None:
+    pygame.init()
+
+    font = pygame.font.SysFont(None, 32)
+
+    def write_text(window: pygame.Surface, txt: str) -> None:
+        text_surface = font.render(txt, True, (255, 255, 255))
+        window.blit(text_surface, (50, 100))
+
     hubs: list[Hub] = []
-    connections: list[tuple[str, str]] = []
-    try:
-        file_path = sys.argv[1]
-        with open(file_path, "r") as f:
-            map_file = f.readlines()
-    except (IOError, IndexError) as e:
-        print(f"error : {e}")
-        sys.exit(0)
+    connections: list[tuple[str, str, int]] = []
+    start_hub: Hub | None = None
+    target_hub: Hub | None = None
 
-    for line in map_file:
-        if line.startswith("#"):
-            continue
-
-        elif line.startswith("nb_drones"):
-            nb_drones = int(line.split()[1])
-
-        elif (
-            line.startswith("start_hub")
-            or line.startswith("hub")
-            or line.startswith("end_hub")
-            ):
-            data = line.split()
-            if line.find("[") != -1:
-                meta_data_str = line[line.find("[") + 1: line.find("]")]
-                meta_data_list = meta_data_str.split()
-                meta_data_dict = {
-                    meta_data_list[i].split("=")[0]:
-                    meta_data_list[i].split("=")[1]
-                    for i in range(len(meta_data_list))}
-
-            hub = Hub(
-                name=data[1],
-                x=int(data[2]),
-                y=int(data[3]),
-                color=meta_data_dict.get("color", "none"),
-                zone=meta_data_dict.get("zone", "normal"),
-                max_drones=meta_data_dict.get("max_drones", 1)
-            )
-            hubs.append(hub)
-            if line.startswith("start_hub"):
-                    start_hub = hub
-            elif line.startswith("end_hub"):
-                    target_hub = hub
-
-        elif line.startswith("connection"):
-            connections.append(
-                (
-                    line.split()[1].split("-")[0],
-                    line.split()[1].split("-")[1]
-                )
-            )
-    # baraka mn parsing
+    hubs, connections, start_hub, target_hub, nb_drones = parsing(hubs, connections, start_hub, target_hub)
 
 
-    avg_x = sum(h.x for h in hubs) / len(hubs)
-    avg_y = sum(h.y for h in hubs) / len(hubs)
+    avg_x = sum(hub.x for hub in hubs) / len(hubs)
+    avg_y = sum(hub.y for hub in hubs) / len(hubs)
 
     graph = Graph()
-    build_the_graph(graph, hubs, connections)
+    init_the_graph(graph, hubs, connections)
 
-    penalty = 10
-    cost_func = lambda h: h.cost + (h.corrent_number_of_drones / max(1, h.max_drones)) * penalty
+    start_hub.max_drones = max(start_hub.max_drones, nb_drones)
+    target_hub.max_drones = max(target_hub.max_drones, nb_drones)
 
-    path: list[Hub] = djikstra(graph, start_hub, target_hub)
-    drone = Drone(start_hub, target_hub)
-    # drone = pygame.image.load("")
-    # drone = pygame.transform.scale(drone, (60, 60))
+    def cost_func(hub: Hub) -> float:
+        if hub.zone == "blocked":
+            return float("inf")
+        return hub.cost
 
-    speed = 1 #pixel per frame
-    path_index = 1
-    current_target = path[path_index]
+    score_margin = 0.0
 
     width, height = 1700, 1000
     for hub in hubs:
         x = width // 2 + (hub.x - avg_x) * 60
         y = height // 2 + (hub.y - avg_y) * 160
         hub.position_on_window = (x, y)
-    img_x, img_y = start_hub.position_on_window
+
     window = pygame.display.set_mode((width, height))
-    window.fill(colors["background"])
     pygame.display.set_caption("fly-in okda ajmi chkt3raf")
 
-    drones: list[Drone] = []
-    for drone in range(nb_drones):
-        drones.append(Drone(start_hub, target_hub))
+    drones: list[Drone] = [
+        Drone(drone_id, start_hub, target_hub)
+        for drone_id in range(1, nb_drones + 1)
+    ]
     start_hub.corrent_number_of_drones = nb_drones
-    for drone in drones:
-        drone.set_path(graph, cost_func)
 
+    router = ScoreBasedRouter(graph, target_hub, cost_func, score_margin=score_margin)
+    turn_number = 0
+
+    def draw_scene(turn_label: str) -> None:
+        window.fill(colors["background"])
+        draw_connections(window, connections, hubs)
+        draw_hubs(window, hubs)
+        draw_flags(window, start_hub, target_hub)
+        write_text(window, turn_label)
+        for drone in drones:
+            drone.show(window, drone.corrent_position[0], drone.corrent_position[1])
+        pygame.display.update()
+
+    def animate_turn_movements(
+        movement_segments: list[tuple[Drone, tuple[float, float], tuple[float, float], str]],
+        turn_label: str,
+        frames: int = 12,
+    ) -> None:
+        if not movement_segments:
+            draw_scene(turn_label)
+            sleep(0.05)
+            return
+
+        for frame in range(frames):
+            progress = (frame + 1) / frames
+            for drone, start_position, end_position, _ in movement_segments:
+                drone.corrent_position = lerp_position(start_position, end_position, progress)
+            draw_scene(turn_label)
+            sleep(0.02)
+
+        for drone, _, end_position, move_kind in movement_segments:
+            drone.corrent_position = end_position
+            if move_kind == "normal_launch" and drone.active_edge is not None:
+                graph.release_edge(*drone.active_edge)
+                drone.active_edge = None
+            elif move_kind == "restricted_arrival" and drone.active_edge is not None:
+                graph.release_edge(*drone.active_edge)
+                drone.active_edge = None
+                drone.finish_restricted_move()
+
+        draw_scene(turn_label)
+        sleep(0.02)
 
     run = True
     while run:
-
-        window.fill(colors["background"])
-
-        draw_connections(window, connections, hubs)
-
-        draw_hubs(window, hubs)
-
-        draw_flags(window, start_hub, target_hub)
-
-        # if not drones[0].reach_target:
+        turn_number += 1
+        turn_events: list[str] = []
+        movement_segments: list[tuple[Drone, tuple[float, float], tuple[float, float], str]] = []
 
         for drone in drones:
-            if drone.reach_target:
+            if not drone.in_transit or drone.transit_destination is None:
                 continue
-            target = drone.current_target.position_on_window
-            dx = target[0] - drone.corrent_position[0]
-            dy = target[1] - drone.corrent_position[1]
-            dist = math.sqrt(dx**2 + dy**2)
-            if dist > 0:
-                dx /= dist
-                dy /= dist
-                drone.corrent_position = (drone.corrent_position[0] + dx * drone.speed, drone.corrent_position[1] + dy * drone.speed)
-            if dist < 5:
-                # reached current_target
-                if drone.current_target == drone.target_hub:
-                    if drone.current_target.corrent_number_of_drones < drone.current_target.max_drones:
-                        drone.reach_target = True
-                        drone.target_hub.corrent_number_of_drones += 1
-                        drone.corrent_position = drone.current_target.position_on_window
-                    else:
-                        # can't enter target, stay
-                        drone.corrent_position = drone.corrent_hub.position_on_window
-                        drone.current_target = drone.corrent_hub
-                        drone.set_path(graph, cost_func)
-                else:
-                    # arrived at intermediate hub
-                    if drone.current_target.corrent_number_of_drones < drone.current_target.max_drones:
-                        drone.corrent_hub.corrent_number_of_drones -= 1
-                        drone.corrent_hub = drone.current_target
-                        drone.current_target.corrent_number_of_drones += 1
-                        drone.corrent_position = drone.current_target.position_on_window
-                        drone.set_path(graph, cost_func)
-                    else:
-                        # can't enter, stay at current_hub
-                        drone.corrent_position = drone.corrent_hub.position_on_window
-                        drone.current_target = drone.corrent_hub
-                        drone.set_path(graph, cost_func)
 
-        for drone in drones:
-            drone.show(window, drone.corrent_position[0], drone.corrent_position[1])
+            if drone.transit_remaining_turns > 0:
+                drone.transit_remaining_turns -= 1
+
+            if drone.transit_remaining_turns == 0:
+                turn_events.append(f"D{drone.drone_id}-{drone.transit_destination.name}")
+                movement_segments.append(
+                    (
+                        drone,
+                        drone.corrent_position,
+                        drone.transit_destination.position_on_window,
+                        "restricted_arrival",
+                    )
+                )
+
+        router.refresh_scores()
+
+        movable_drones = [drone for drone in drones if is_drone_movable(drone)]
+        movable_drones.sort(
+            key=lambda drone: (
+                router.hub_scores.get(drone.corrent_hub).forward_options
+                if router.hub_scores.get(drone.corrent_hub) is not None else 0,
+                router.distance_to_target.get(drone.corrent_hub, math.inf),
+                drone.drone_id,
+            )
+        )
+
+        for drone in movable_drones:
+            next_hub = router.choose_next_hub(drone)
+            if next_hub is None:
+                continue
+
+            origin = drone.corrent_hub
+            graph.reserve_edge(origin, next_hub)
+            if origin != start_hub:
+                origin.corrent_number_of_drones -= 1
+            if next_hub != target_hub:
+                next_hub.corrent_number_of_drones += 1
+
+            drone.active_edge = (origin, next_hub)
+            drone.current_target = next_hub
+
+            if next_hub.zone == "restricted":
+                drone.begin_restricted_move(
+                    next_hub,
+                    # f"{origin.name}-{next_hub.name}",
+                    origin.position_on_window,
+                )
+                turn_events.append(f"D{drone.drone_id}-{origin.name}-{next_hub.name}")
+                movement_segments.append(
+                    (
+                        drone,
+                        origin.position_on_window,
+                        hub_midpoint(origin, next_hub),
+                        "restricted_launch",
+                    )
+                )
+            else:
+                drone.begin_normal_move(next_hub, origin.position_on_window)
+                if next_hub == target_hub:
+                    drone.reach_target = True
+                turn_events.append(f"D{drone.drone_id}-{next_hub.name}")
+                movement_segments.append(
+                    (
+                        drone,
+                        origin.position_on_window,
+                        next_hub.position_on_window,
+                        "normal_launch",
+                    )
+                )
+
+            router.refresh_scores()
+
+        print(" ".join(turn_events))
+        animate_turn_movements(movement_segments, f"turn = {turn_number}")
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 run = False
 
-        pygame.display.update()
-        sleep(0.003)
+        # if all(drone.reach_target for drone in drones):
+        #     run = False
 
-    print(graph)
+    print(f"completed in {turn_number} turns")
 
-    print(path)
-
-    print(len(hubs))
 
 if __name__ == "__main__":
     main()

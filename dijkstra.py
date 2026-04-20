@@ -4,19 +4,34 @@ import heapq
 def djikstra(graph, start_hub, target_hub, cost_func=None):
     if cost_func is None:
         cost_func = lambda h: h.cost  # Default to static zone-based cost
-    previous = {v: None for v in graph.nodes.keys()}
-    visited = {v: False for v in graph.nodes.keys()}
-    costs = {v: float("inf") for v in graph.nodes.keys()}
+    all_nodes = set(graph.nodes.keys())
+    for edges in graph.nodes.values():
+        for edge in edges:
+            all_nodes.add(edge.target)
+
+    all_nodes.add(start_hub)
+    all_nodes.add(target_hub)
+
+    previous = {v: None for v in all_nodes}
+    visited = {v: False for v in all_nodes}
+    costs = {v: float("inf") for v in all_nodes}
     costs[start_hub] = 0
     queue = []
     heapq.heappush(queue, (0, start_hub))
     while queue:
         removed_cost, removed_hub = heapq.heappop(queue)
+        if visited[removed_hub]:
+            continue
         visited[removed_hub] = True
+        if removed_hub == target_hub:
+            break
         for edge in graph.nodes[removed_hub]:
             if visited[edge.target]:
                 continue
-            new_cost = removed_cost + cost_func(edge.target)
+            target_cost = cost_func(edge.target)
+            if target_cost == float("inf"):
+                continue
+            new_cost = removed_cost + target_cost
             if new_cost < costs[edge.target]:
                 costs[edge.target] = new_cost
                 previous[edge.target] = removed_hub
