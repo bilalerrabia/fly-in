@@ -7,11 +7,11 @@ import random
 from dijkstra import djikstra
 
 
-def get_hub(name: str, hubs: list):
-    for hub in hubs:
-        if hub.name == name:
-            return hub
-    raise ValueError(f"hub not found: {name}")
+# def get_hub(name: str, hubs: list):
+#     for hub in hubs:
+#         if hub.name == name:
+#             return hub
+#     raise ValueError(f"hub not found: {name}")
 
 
 class Graph:
@@ -51,7 +51,9 @@ class Graph:
             rep += f"{key} = {value}\n"
         return rep
 
+
 class Hub:
+
     def __init__(self, name: str, x: int, y: int, color: str, zone: str, max_drones: int):
         self.name = name
         self.x = x
@@ -62,8 +64,10 @@ class Hub:
         self.position_on_window = (-1, -1)
         self.cost = self.get_cost(self)
         self.corrent_number_of_drones = 0
+
     def __repr__(self) -> str:
         return self.name
+
 
     def get_cost(self, hub: Hub) -> float:
         if hub.zone == "blocked":
@@ -79,6 +83,12 @@ class Hub:
     def __lt__(self, other: Hub) -> bool:
         return self.get_cost(self) < self.get_cost(other)
 
+    def get_hub(name: str, hubs: list[Hub]) -> Hub:
+        for hub in hubs:
+            if hub.name == name:
+                return hub
+        raise ValueError(f"hub not found: {name}")
+
 
 class Edge:
     def __init__(self, cost: float, target: Hub, capacity: int = 1):
@@ -86,10 +96,30 @@ class Edge:
         self.target: Hub = target
         self.capacity: int = int(capacity)
 
+
+    def is_there(name: str, list_hubs: list[Edge]) -> bool:
+        for edge in list_hubs:
+            if name == edge.target.name:
+                return True
+        return False
+
+
+    def add_edge(graph: Graph, hub1: Hub, hub2: Hub, capacity: int = 1) -> None:
+        graph.add_link(hub1, hub2, capacity)
+        if graph.nodes.get(hub1, None) is None:
+            edge = Edge(hub2.cost, hub2, capacity)
+            graph.nodes[hub1] = [edge]
+        else:
+            edge = Edge(hub2.cost, hub2, capacity)
+            if not Edge.is_there(hub2.name, graph.nodes[hub1]):
+                graph.nodes[hub1].append(edge)
+
+
     def __repr__(self) -> str:
         return f"cost={self.cost} target={self.target} capacity={self.capacity}"
-class Drone:
 
+
+class Drone:
     def __init__(self, drone_id: int, start_hub: Hub, target_hub: Hub):
 
         folder_path = "fotos"
@@ -164,3 +194,7 @@ class Drone:
         img = pygame.image.load(self.img)
         img = pygame.transform.scale(img, (70, 70))
         window.blit(img, (int(img_x - 30), int(img_y - 30)))
+
+
+    def is_drone_movable(drone: Drone) -> bool:
+        return not drone.reach_target and not drone.in_transit

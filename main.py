@@ -10,31 +10,6 @@ from some_parameters import colors
 from parsing import parsing
 
 
-def get_hub(name: str, hubs: list[Hub]) -> Hub:
-    for hub in hubs:
-        if hub.name == name:
-            return hub
-    raise ValueError(f"hub not found: {name}")
-
-
-def is_there(name: str, list_hubs: list[Edge]) -> bool:
-    for edge in list_hubs:
-        if name == edge.target.name:
-            return True
-    return False
-
-
-def add_edge(graph: Graph, hub1: Hub, hub2: Hub, capacity: int = 1) -> None:
-    graph.add_link(hub1, hub2, capacity)
-    if graph.nodes.get(hub1, None) is None:
-        edge = Edge(hub2.cost, hub2, capacity)
-        graph.nodes[hub1] = [edge]
-    else:
-        edge = Edge(hub2.cost, hub2, capacity)
-        if not is_there(hub2.name, graph.nodes[hub1]):
-            graph.nodes[hub1].append(edge)
-
-
 def draw_hubs(window: pygame.Surface, hubs: list[Hub]) -> None:
     for hub in hubs:
         if hub.color == "none" or hub.color not in colors:
@@ -59,11 +34,11 @@ def draw_connections(
     hubs: list[Hub],
 ) -> None:
     for connection in connections:
-        if get_hub(connection[0], hubs).zone == "blocked":
+        if Hub.get_hub(connection[0], hubs).zone == "blocked":
             color = colors["red"]
-        elif get_hub(connection[0], hubs).zone == "priority":
+        elif Hub.get_hub(connection[0], hubs).zone == "priority":
             color = colors["green"]
-        elif get_hub(connection[0], hubs).zone == "restricted":
+        elif Hub.get_hub(connection[0], hubs).zone == "restricted":
             color = colors["darkred"]
         else:
             color = colors["white"]
@@ -71,8 +46,8 @@ def draw_connections(
         pygame.draw.line(
             window,
             color,
-            get_hub(connection[0], hubs).position_on_window,
-            get_hub(connection[1], hubs).position_on_window,
+            Hub.get_hub(connection[0], hubs).position_on_window,
+            Hub.get_hub(connection[1], hubs).position_on_window,
             width=3,
         )
 
@@ -83,11 +58,11 @@ def init_the_graph(
     connections: list[tuple[str, str, int]],
 ) -> None:
     for connection in connections:
-        hub1 = get_hub(connection[0], hubs)
-        hub2 = get_hub(connection[1], hubs)
+        hub1 = Hub.get_hub(connection[0], hubs)
+        hub2 = Hub.get_hub(connection[1], hubs)
         capacity = connection[2]
-        add_edge(graph, hub1, hub2, capacity)
-        add_edge(graph, hub2, hub1, capacity)
+        Edge.add_edge(graph, hub1, hub2, capacity)
+        Edge.add_edge(graph, hub2, hub1, capacity)
 
 
 def hub_midpoint(hub1: Hub, hub2: Hub) -> tuple[float, float]:
@@ -95,10 +70,6 @@ def hub_midpoint(hub1: Hub, hub2: Hub) -> tuple[float, float]:
         (hub1.position_on_window[0] + hub2.position_on_window[0]) / 2,
         (hub1.position_on_window[1] + hub2.position_on_window[1]) / 2,
     )
-
-
-def is_drone_movable(drone: Drone) -> bool:
-    return not drone.reach_target and not drone.in_transit
 
 
 def lerp_position(
@@ -226,10 +197,9 @@ def main() -> None:
                         "restricted_arrival",
                     )
                 )
-
         router.refresh_scores()
 
-        movable_drones = [drone for drone in drones if is_drone_movable(drone)]
+        movable_drones = [drone for drone in drones if Drone.is_drone_movable(drone)]
         movable_drones.sort(
             key=lambda drone: (
                 router.hub_scores.get(drone.corrent_hub).forward_options
