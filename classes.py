@@ -3,23 +3,79 @@ import os
 import random
 
 from dijkstra import djikstra
-# from main import get_hub
+from some_parameters import colors
+from draw_flags import draw_flags
 
 
-def get_hub(name, hubs):
-    for hub in hubs:
-        if hub.name == name:
-            return hub
+class Drawing_Animation_Methods:
+
+    @staticmethod
+    def draw_scene(window, connections, hubs, start_hub, target_hub, drones, turn_text, write_text):
+        window.fill(colors["background"])
+        Edge.draw_connections(window, connections, hubs)
+        Hub.draw_hubs(window, hubs)
+        for _ in range(10):
+            draw_flags(window, start_hub, target_hub)
+        write_text(window, turn_text)
+        for drone in drones:
+            drone.show(window, drone.display_position[0], drone.display_position[1])
+        pygame.display.update()
+
+    @staticmethod
+    def lerp_position(start: tuple, end: tuple, progress: float) -> tuple:
+        return (
+            start[0] + (end[0] - start[0]) * progress,
+            start[1] + (end[1] - start[1]) * progress,
+        )
+
+    @staticmethod
+    def animate_movements(
+        window,
+        clock,
+        connections,
+        hubs,
+        start_hub,
+        target_hub,
+        drones,
+        write_text,
+        turn_text,
+        movements,
+        frames: int = 12):
+
+        for frame in range(1, frames + 1):
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    exit(0)
+
+            progress = frame / frames
+            for drone, start_position, end_position in movements:
+                drone.display_position = Drawing_Animation_Methods.lerp_position(start_position, end_position, progress)
+
+            Drawing_Animation_Methods.draw_scene(window, connections, hubs, start_hub, target_hub, drones, turn_text, write_text)
+            clock.tick(60)
+
+        for drone, _, end_position in movements:
+            drone.display_position = end_position
+
+        return True
 
 
 class Graph:
     def __init__(self):
         self.nodes: dict[Hub: list[Edge]] = {}
-        self.link_capacity: dict[frozenset[str], int] = {}
-        self.link_load: dict[frozenset[str], int] = {}
+        self.link_capacity: dict[set, int] = {}
+        self.link_load: dict[set, int] = {}
+
+    def init_the_graph(graph, hubs: list, connections: list):
+        for connection in connections:
+            hub1 = Hub.get_hub(connection[0], hubs)
+            hub2 = Hub.get_hub(connection[1], hubs)
+            capacity = connection[2]
+            Edge.add_edge(graph, hub1, hub2, capacity)
+            Edge.add_edge(graph, hub2, hub1, capacity)
 
     def edge_key(self, hub1, hub2):
-        return frozenset((hub1.name, hub2.name))
+        return (hub1.name, hub2.name)
 
     def add_link(self, hub1, hub2, capacity: int = 1):
         key = self.edge_key(hub1, hub2)
@@ -60,6 +116,7 @@ class Hub:
         self.position_on_window = (-1, -1)
         self.cost = self.get_cost(self)
         self.corrent_number_of_drones = 0
+
     def __repr__(self):
         return self.name
 
@@ -73,6 +130,29 @@ class Hub:
         elif hub.zone == "restricted":
             return 2
 
+    @staticmethod
+    def get_hub(name, hubs):
+        for hub in hubs:
+            if hub.name == name:
+                return hub
+
+
+    @staticmethod
+    def can_enter_hub(hub, start_hub, target_hub) -> bool:
+        if hub in (start_hub, target_hub):
+            return True
+        if hub.zone == "blocked":
+            return False
+        return hub.corrent_number_of_drones < hub.max_drones
+
+
+    def draw_hubs(window, hubs):
+        for hub in hubs:
+            if hub.color == "none" or hub.color not in colors:
+                pygame.draw.circle(window, colors["green"], (hub.position_on_window[0], hub.position_on_window[1]), 20)
+            else:
+                pygame.draw.circle(window, colors[hub.color], (hub.position_on_window[0], hub.position_on_window[1]), 20)
+
     def __lt__(self, other):
         return self.get_cost(self) < self.get_cost(other)
 
@@ -83,8 +163,47 @@ class Edge:
         self.target: Hub = target
         self.capacity: int = int(capacity)
 
+    @staticmethod
+    def is_there(name: str, list_hubs: list):
+        for edge in list_hubs:
+            if name == edge.target.name:
+                return True
+        return False
+
+    @staticmethod
+    def add_edge(graph: Graph, hub1: Hub, hub2: Hub, capacity: int = 1):
+        graph.add_link(hub1, hub2, capacity)
+        if graph.nodes.get(hub1, None) is None:
+            edge = Edge(hub2.cost, hub2, capacity)
+            graph.nodes[hub1] = [edge]
+        else:
+            edge = Edge(hub2.cost, hub2, capacity)
+            if not Edge.is_there(hub2.name, graph.nodes[hub1]):
+                graph.nodes[hub1].append(edge)
+
+    def draw_connections(window, connections, hubs):
+        for connection in connections:
+            first_hub = Hub.get_hub(connection[0], hubs)
+            second_hub = Hub.get_hub(connection[1], hubs)
+            if first_hub.zone == "blocked":
+                color = colors["red"]
+            elif first_hub.zone == "priority":
+                color = colors["green"]
+            elif first_hub.zone == "restricted":
+                color = colors["darkred"]
+            else:
+                color = colors["white"]
+            
+            pygame.draw.line(
+                window, color,
+                first_hub.position_on_window,
+                second_hub.position_on_window,
+                width=3
+            )
+
     def __repr__(self):
         return f"cost={self.cost} target={self.target} capacity={self.capacity}"
+
 class Drone:
 
     def __init__(self, start_hub: Hub, target_hub: Hub, identifier: int):
@@ -112,8 +231,8 @@ class Drone:
         self.transit_connection_name: str | None = None
         self.active_edge: tuple[Hub, Hub] | None = None
 
-    def set_path(self, graph, cost_func=None):
-        self.path = djikstra(graph, self.corrent_hub, self.target_hub, cost_func)
+    def set_path(self, graph):
+        self.path = djikstra(graph, self.corrent_hub, self.target_hub)
         if len(self.path) > 1:
             self.current_target = self.path[1]
         else:
@@ -121,3 +240,4 @@ class Drone:
 
     def show(self, window, img_x, img_y):
         window.blit(self.sprite, (int(img_x - 30), int(img_y - 30)))
+

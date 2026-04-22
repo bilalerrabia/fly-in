@@ -1,9 +1,9 @@
 # from classes import Graph, Hub, Edge
 import heapq
 
-def djikstra(graph, start_hub, target_hub, cost_func=None):
-    if cost_func is None:
-        cost_func = lambda h: h.cost  # Default to static zone-based cost
+def djikstra(graph, start_hub, target_hub):
+
+    cost_func = lambda h: float("inf") if h.zone == "blocked" else h.cost
     all_nodes = set(graph.nodes.keys())
     for edges in graph.nodes.values():
         for edge in edges:
