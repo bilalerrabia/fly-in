@@ -22,10 +22,10 @@ def parse_connection(line: str) -> tuple[str, str, int]:
     return first, second, capacity
 
 
-def parsing(hubs, connections, start_hub, target_hub):
+def parsing(hubs: list, connections, start_hub, target_hub):
     try:
         file_path = sys.argv[1]
-        with open(file_path, "r", encoding="utf-8") as file_handle:
+        with open(file_path) as file_handle:
             map_file = file_handle.readlines()
     except (IOError, IndexError) as error:
         print(f"error : {error}")

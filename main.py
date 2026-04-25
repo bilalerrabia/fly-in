@@ -154,7 +154,7 @@ def main():
             if drone.turns_remaining > 0:
                 continue
 
-            if drone.active_edge is not None:
+            if drone.active_edge :
                 graph.release_edge(*drone.active_edge)
                 drone.active_edge = None
 
@@ -185,7 +185,7 @@ def main():
             if drone.reach_target or drone.in_transit or drone.identifier in arrived_this_turn:
                 continue
 
-            drone.set_path(graph)
+            # drone.set_path(graph)
             ranked_candidates = rank_next_hubs(graph, drone.corrent_hub, start_hub, target_hub, static_distances, drone)
             if not ranked_candidates:
                 continue
@@ -215,7 +215,7 @@ def main():
                 drone.transit_connection_name = connection_name
                 drone.display_position = start_position
                 turn_events.append(f"D{drone.identifier}-{connection_name}")
-                turn_movements.append((drone, start_position, lerp_position(start_position, next_hub.position_on_window, 0.5)))
+                turn_movements.append((drone, start_position, Drawing_Animation_Methods.lerp_position(start_position, next_hub.position_on_window, 0.5)))
             else:
                 next_hub.corrent_number_of_drones += 1
                 drone.corrent_hub = next_hub
