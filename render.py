@@ -1,4 +1,4 @@
-from __future__ import annotations
+# from __future__ import annotations
 
 import pygame
 
@@ -64,7 +64,7 @@ class Rendring:
             draw_flags(window, start_hub, target_hub)
         write_text(window, turn_text)
         for drone in drones:
-            drone.show(window, drone.display_position[0], drone.display_position[1])
+            drone.show(window, drone.corrent_position[0], drone.corrent_position[1])
         pygame.display.update()
 
     @staticmethod
@@ -88,7 +88,7 @@ class Rendring:
 
             progress = frame / frames
             for drone, start_position, end_position in movements:
-                drone.display_position = Rendring.lerp_position(
+                drone.corrent_position = Rendring.lerp_position(
                     start_position,
                     end_position,
                     progress,
@@ -107,6 +107,6 @@ class Rendring:
             clock.tick(60)
 
         for drone, _, end_position in movements:
-            drone.display_position = end_position
+            drone.corrent_position = end_position
 
         return True

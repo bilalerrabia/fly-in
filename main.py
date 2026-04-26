@@ -8,12 +8,13 @@ from time import sleep
 from some_parameters import colors
 from classes import Hub, Graph, Edge, Drone
 from render import Rendring
-from dijkstra import djikstra
+# from dijkstra import djikstra
 from draw_flags import draw_flags
 from parsing import parsing
 
 
 def build_static_distance_map(graph: Graph, hubs: list[Hub], target_hub: Hub) -> dict[Hub, float]:
+
     distances: dict[Hub, float] = {hub: inf for hub in hubs}
     distances[target_hub] = 0.0
 
@@ -49,6 +50,7 @@ def rank_next_hubs(
     static_distances: dict[Hub, float],
     drone: Drone,
 ):
+
     ranked_candidates: list[tuple[float, float, float, Hub]] = []
     current_distance = static_distances.get(current_hub, inf)
     if current_distance == inf:
@@ -61,9 +63,8 @@ def rank_next_hubs(
             continue
         if next_hub.zone == "blocked":
             continue
-        if not graph.edge_available(current_hub, next_hub):
-            continue
-        if not Hub.can_enter_hub(next_hub, start_hub, target_hub):
+
+        if not next_hub.can_enter_hub():
             continue
 
         if next_distance > current_distance:
@@ -77,11 +78,7 @@ def rank_next_hubs(
         if next_hub != target_hub and forward_options == 0:
             continue
 
-        revisit_penalty = 0.0
-        if next_hub in drone.passed_hubs:
-            revisit_penalty += 12.0
-        if len(drone.passed_hubs) >= 2 and next_hub == drone.passed_hubs[-2]:
-            revisit_penalty += 25.0
+        revisit_penalty = 100.0
         ranked_candidates.append((next_distance, revisit_penalty, -float(forward_options), next_hub))
 
     ranked_candidates.sort(key=lambda item: (item[0], item[1], item[2], item[3].name))
@@ -89,11 +86,13 @@ def rank_next_hubs(
 
 
 def main():
+
     pygame.init()
 
     font = pygame.font.SysFont(None, 32)
 
     def write_text(window, txt: str):
+        """Render a single status line on the top left window."""
         text_surface = font.render(txt, True, (255, 255, 255))
         window.blit(text_surface, (50, 100))
 
@@ -149,39 +148,39 @@ def main():
             if not drone.in_transit:
                 continue
 
-            drone.turns_remaining -= 1
-            if drone.turns_remaining > 0:
-                continue
+            # drone.turns_remaining -= 1
+            # if drone.turns_remaining > 0:
+            #     continue
 
-            if drone.active_edge :
-                graph.release_edge(*drone.active_edge)
-                drone.active_edge = None
+            # if drone.active_edge :
+            #     # graph.release_edge(*drone.active_edge)
+            #     drone.active_edge = None
 
             arrival_hub = drone.current_target
             if arrival_hub is None:
                 drone.in_transit = False
-                drone.turns_remaining = 0
+                # drone.turns_remaining = 0
                 continue
 
             drone.corrent_hub = arrival_hub
             drone.corrent_position = arrival_hub.position_on_window
-            arrival_start = drone.display_position
+            arrival_start = drone.corrent_position
             arrival_end = arrival_hub.position_on_window
-            drone.display_position = arrival_start
+            drone.corrent_position = arrival_start
             drone.current_target = arrival_hub
             drone.in_transit = False
-            drone.turns_remaining = 0
-            drone.transit_connection_name = None
-            drone.passed_hubs.append(arrival_hub)
-            turn_events.append(f"D{drone.identifier}-{arrival_hub.name}")
+            # drone.turns_remaining = 0
+            # drone.transit_connection_name = None
+            # drone.passed_hubs.append(arrival_hub)
+            turn_events.append(f"D{drone.id}-{arrival_hub.name}")
             turn_movements.append((drone, arrival_start, arrival_end))
-            arrived_this_turn.add(drone.identifier)
+            arrived_this_turn.add(drone.id)
 
             if arrival_hub == target_hub:
                 drone.reach_target = True
 
         for drone in drones:
-            if drone.reach_target or drone.in_transit or drone.identifier in arrived_this_turn:
+            if drone.reach_target or drone.in_transit or drone.id in arrived_this_turn:
                 continue
 
             # drone.set_path(graph)
@@ -202,35 +201,32 @@ def main():
 
             source_hub = drone.corrent_hub
             connection_name = f"{source_hub.name}-{next_hub.name}"
-            graph.reserve_edge(source_hub, next_hub)
+            # graph.reserve_edge(source_hub, next_hub)
             source_hub.corrent_number_of_drones -= 1
             start_position = source_hub.position_on_window
 
             if next_hub.zone == "restricted":
                 next_hub.corrent_number_of_drones += 1
-                drone.active_edge = (source_hub, next_hub)
+                # drone.active_edge = (source_hub, next_hub)
                 drone.in_transit = True
-                drone.turns_remaining = 1
+                # drone.turns_remaining = 1
                 drone.current_target = next_hub
-                drone.transit_connection_name = connection_name
-                drone.display_position = start_position
-                turn_events.append(f"D{drone.identifier}-{connection_name}")
+                # drone.transit_connection_name = connection_name
+                drone.corrent_position = start_position
+                turn_events.append(f"D{drone.id}-{connection_name}")
                 turn_movements.append((drone, start_position, Rendring.lerp_position(start_position, next_hub.position_on_window, 0.5)))
             else:
                 next_hub.corrent_number_of_drones += 1
                 drone.corrent_hub = next_hub
                 drone.corrent_position = next_hub.position_on_window
-                drone.display_position = start_position
+                drone.corrent_position = start_position
                 drone.current_target = next_hub
-                drone.passed_hubs.append(next_hub)
-                turn_events.append(f"D{drone.identifier}-{next_hub.name}")
+                # drone.passed_hubs.append(next_hub)
+                turn_events.append(f"D{drone.id}-{next_hub.name}")
                 if next_hub == target_hub:
                     drone.reach_target = True
                 turn_reservations.append((source_hub, next_hub))
                 turn_movements.append((drone, start_position, next_hub.position_on_window))
-
-        for source_hub, destination_hub in turn_reservations:
-            graph.release_edge(source_hub, destination_hub)
 
         if turn_events:
             turn += 1
