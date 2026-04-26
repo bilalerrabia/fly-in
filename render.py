@@ -3,11 +3,11 @@ from __future__ import annotations
 import pygame
 
 from draw_flags import draw_flags
-from model import Hub
+from classes import Hub
 from some_parameters import colors
 
 
-class Drawing_Animation_Methods:
+class Rendring:
     @staticmethod
     def lerp_position(start: tuple[float, float], end: tuple[float, float], progress: float) -> tuple[float, float]:
         return (
@@ -58,8 +58,8 @@ class Drawing_Animation_Methods:
     @staticmethod
     def draw_scene(window, connections, hubs, start_hub, target_hub, drones, turn_text, write_text):
         window.fill(colors["background"])
-        Drawing_Animation_Methods.draw_connections(window, connections, hubs)
-        Drawing_Animation_Methods.draw_hubs(window, hubs)
+        Rendring.draw_connections(window, connections, hubs)
+        Rendring.draw_hubs(window, hubs)
         for _ in range(10):
             draw_flags(window, start_hub, target_hub)
         write_text(window, turn_text)
@@ -88,13 +88,13 @@ class Drawing_Animation_Methods:
 
             progress = frame / frames
             for drone, start_position, end_position in movements:
-                drone.display_position = Drawing_Animation_Methods.lerp_position(
+                drone.display_position = Rendring.lerp_position(
                     start_position,
                     end_position,
                     progress,
                 )
 
-            Drawing_Animation_Methods.draw_scene(
+            Rendring.draw_scene(
                 window,
                 connections,
                 hubs,

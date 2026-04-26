@@ -7,96 +7,35 @@ from some_parameters import colors
 from draw_flags import draw_flags
 
 
-class Drawing_Animation_Methods:
-
-    @staticmethod
-    def draw_scene(window, connections, hubs, start_hub, target_hub, drones, turn_text, write_text):
-        window.fill(colors["background"])
-        Edge.draw_connections(window, connections, hubs)
-        Hub.draw_hubs(window, hubs)
-        for _ in range(10):
-            draw_flags(window, start_hub, target_hub)
-        write_text(window, turn_text)
-        for drone in drones:
-            drone.show(window, drone.display_position[0], drone.display_position[1])
-        pygame.display.update()
-
-    @staticmethod
-    def lerp_position(start: tuple, end: tuple, progress: float) -> tuple:
-        return (
-            start[0] + (end[0] - start[0]) * progress,
-            start[1] + (end[1] - start[1]) * progress,
-        )
-
-    @staticmethod
-    def animate_movements(
-        window,
-        clock,
-        connections,
-        hubs,
-        start_hub,
-        target_hub,
-        drones,
-        write_text,
-        turn_text,
-        movements,
-        frames: int = 12):
-
-        for frame in range(1, frames + 1):
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    exit(0)
-
-            progress = frame / frames
-            for drone, start_position, end_position in movements:
-                drone.display_position = Drawing_Animation_Methods.lerp_position(start_position, end_position, progress)
-
-            Drawing_Animation_Methods.draw_scene(window, connections, hubs, start_hub, target_hub, drones, turn_text, write_text)
-            clock.tick(60)
-
-        for drone, _, end_position in movements:
-            drone.display_position = end_position
-
-        return True
-
-
 class Graph:
-    def __init__(self):
+    def __init__(self, hubs: list, connections: list):
         self.nodes: dict[Hub: list[Edge]] = {}
         self.link_capacity: dict[set, int] = {}
         self.link_load: dict[set, int] = {}
-
-    def init_the_graph(graph, hubs: list, connections: list):
         for connection in connections:
             hub1 = Hub.get_hub(connection[0], hubs)
             hub2 = Hub.get_hub(connection[1], hubs)
             capacity = connection[2]
-            Edge.add_edge(graph, hub1, hub2, capacity)
-            Edge.add_edge(graph, hub2, hub1, capacity)
-
-    def edge_key(self, hub1, hub2):
-        return (hub1.name, hub2.name)
+            Edge.add_edge(self, hub1, hub2, capacity)
+            Edge.add_edge(self, hub2, hub1, capacity)
 
     def add_link(self, hub1, hub2, capacity: int = 1):
-        key = self.edge_key(hub1, hub2)
+        key = (hub1.name, hub2.name)
         self.link_capacity[key] = int(capacity)
         self.link_load.setdefault(key, 0)
 
-    def edge_capacity(self, hub1, hub2):
-        return self.link_capacity.get(self.edge_key(hub1, hub2), 1)
-
     def edge_load(self, hub1, hub2):
-        return self.link_load.get(self.edge_key(hub1, hub2), 0)
+        return self.link_load.get((hub1.name, hub2.name), 0)
 
     def edge_available(self, hub1, hub2):
-        return self.edge_load(hub1, hub2) < self.edge_capacity(hub1, hub2)
+        return self.edge_load(hub1, hub2) < 1
 
     def reserve_edge(self, hub1, hub2):
-        key = self.edge_key(hub1, hub2)
+        key = (hub1.name, hub2.name)
         self.link_load[key] = self.link_load.get(key, 0) + 1
 
     def release_edge(self, hub1, hub2):
-        key = self.edge_key(hub1, hub2)
+        key = (hub1.name, hub2.name)
         self.link_load[key] = max(0, self.link_load.get(key, 0) - 1)
 
     def __repr__(self):

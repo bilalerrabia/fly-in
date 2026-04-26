@@ -6,7 +6,8 @@ from math import inf
 from time import sleep
 
 from some_parameters import colors
-from classes import Hub, Graph, Edge, Drone, Drawing_Animation_Methods
+from classes import Hub, Graph, Edge, Drone
+from render import Rendring
 from dijkstra import djikstra
 from draw_flags import draw_flags
 from parsing import parsing
@@ -111,8 +112,7 @@ def main():
     avg_x = sum(hub.x for hub in hubs) / len(hubs)
     avg_y = sum(hub.y for hub in hubs) / len(hubs)
 
-    graph = Graph()
-    Graph.init_the_graph(graph, hubs, connections)
+    graph = Graph(hubs, connections)
     # connection_labels = build_connection_labels(connections)
     static_distances = build_static_distance_map(graph, hubs, target_hub)
     # cost_func = make_cost_func(start_hub, target_hub)
@@ -139,7 +139,6 @@ def main():
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 run = False
-
 
         turn_events: list[str] = []
         turn_movements: list[tuple[Drone, tuple[float, float], tuple[float, float]]] = []
@@ -187,6 +186,7 @@ def main():
 
             # drone.set_path(graph)
             ranked_candidates = rank_next_hubs(graph, drone.corrent_hub, start_hub, target_hub, static_distances, drone)
+            # print(ranked_candidates)
             if not ranked_candidates:
                 continue
 
@@ -215,7 +215,7 @@ def main():
                 drone.transit_connection_name = connection_name
                 drone.display_position = start_position
                 turn_events.append(f"D{drone.identifier}-{connection_name}")
-                turn_movements.append((drone, start_position, Drawing_Animation_Methods.lerp_position(start_position, next_hub.position_on_window, 0.5)))
+                turn_movements.append((drone, start_position, Rendring.lerp_position(start_position, next_hub.position_on_window, 0.5)))
             else:
                 next_hub.corrent_number_of_drones += 1
                 drone.corrent_hub = next_hub
@@ -236,7 +236,7 @@ def main():
             turn += 1
             print(turn , " ".join(turn_events))
 
-        Drawing_Animation_Methods.animate_movements(window, clock, connections, hubs, start_hub,
+        Rendring.animate_movements(window, clock, connections, hubs, start_hub,
             target_hub, drones, write_text, f"turn = {turn}", turn_movements)
 
     pygame.quit()

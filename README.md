@@ -55,39 +55,8 @@ Each map file contains:
 - Draws the graph, the drones, and animated start/end flags in a Pygame window
 - Prints one movement line per simulation turn
 
-## Algorithm Choices and Implementation Strategy
-The current implementation uses a centralized, turn-based scheduler.
-
-### 1. Graph construction
-The map is parsed into a graph where each hub becomes a node and each connection becomes a bidirectional edge. Connection capacities are stored separately so the scheduler can reserve and release them during the simulation.
-
-### 2. Shortest-path recomputation
-Each idle drone recomputes its shortest path from the current hub to the target hub on every turn. The final move choice is then filtered through a static shortest-distance map, which rejects dead-end hubs and keeps the drone moving toward the target.
-
-### 3. Next-move selection
-The scheduler then tries to launch drones in turn order. It checks the current shortest-path candidates, keeps only the three best next hubs, filters out dead-end routes, rejects blocked or full destinations, reserves the connection, and prints exactly one movement line for the turn.
-
-The decision rule is intentionally simple:
-- prefer the next hub with the smallest remaining distance to the target
-- respect hub capacity and connection capacity before launching a move
-- only move when one of the top three shortest candidates is available and still has a real route to the target
-- reserve restricted zones across turns so they cannot be overbooked
-- if no move is possible, the drone waits
-
-This keeps the behavior deterministic and prevents the drones from taking random detours while still adapting to the live turn state.
-
-### 4. Turn scheduling
-The simulation runs in discrete turns.
-- drones that are already traveling finish their transit first
-- then the router chooses moves for idle drones
-- capacities are updated immediately when a move starts
-- the turn ends after all movements for that frame are resolved
-
-### 5. Restricted zones
-Restricted zones are treated as longer movements. They are animated and resolved over multiple turns, which matches the subject's movement-cost rules.
-
-### 6. Trade-offs
-This is a greedy, centralized scheduler rather than a full multi-agent pathfinding solver. That makes it easier to understand and maintain, while still being effective on the provided maps. The main trade-off is that it does not guarantee a globally optimal solution for every possible graph, but it gives a practical and explainable strategy for the project.
+## Workflow and Algorithm
+The workflow starts in `parsing`, which reads the map file, extracts `nb_drones`, `start_hub`, `end_hub`, `hub`, and `connections` entries, and returns the hub list, the connection list, and the two special endpoints; after that, `main` creates the `Graph`, fills it with `Graph.init_the_graph`, places each hub on the window, creates one `Drone` per requested unit, and computes a reverse distance table with `build_static_distance_map` so every hub has a fast estimate of how far it is from the target; the simulation then runs in discrete turns, and each turn first resolves drones already traveling by decrementing `turns_remaining`, releasing the reserved link with `graph.release_edge`, moving the drone to the arrival hub, and marking it as finished if it reached `target_hub`; once the moving drones are updated, the scheduler examines each idle drone, uses `rank_next_hubs` to filter legal neighbors with the static distance map, `graph.edge_available`, `Hub.can_enter_hub`, blocked-zone checks, and a small revisit penalty based on `passed_hubs`, keeps only the best candidates, and chooses the next move; if the destination is a normal hub, the drone moves immediately, updates its current hub and occupancy, and the turn is recorded, but if the destination is a restricted hub the drone enters multi-turn travel by setting `in_transit`, `turns_remaining`, `current_target`, and `active_edge`, while `graph.reserve_edge` keeps the connection locked until arrival; after all decisions are collected, `Drawing_Animation_Methods.animate_movements` interpolates the sprite positions frame by frame and `Drawing_Animation_Methods.draw_scene` redraws the full scene with hubs, connections, drones, and the animated flags from `draw_flags`, so the whole scheduler stays deterministic, greedy, and easy to follow because every choice is driven by the precomputed distance-to-target values plus live capacity checks rather than by random path selection.
 
 ## Visual Representation
 The project uses Pygame to present the simulation visually.
