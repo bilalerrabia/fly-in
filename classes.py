@@ -105,6 +105,7 @@ class Drone:
         self.id = Id
         self.corrent_hub = start_hub
         self.corrent_position = start_hub.position_on_window
+        self.current_target: Hub | None = None
         self.reach_target: bool = False
         self.in_transit: bool = False
 
