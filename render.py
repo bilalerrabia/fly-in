@@ -51,10 +51,9 @@ class Rendring:
     @staticmethod
     def draw_frame(window, connections, hubs, start_hub, target_hub, drones, turn_text, write_text):
         window.fill(colors["background"])
+        draw_flags(window, start_hub, target_hub)
         Rendring.draw_connections(window, connections, hubs)
         Rendring.draw_hubs(window, hubs)
-        for _ in range(5):
-            draw_flags(window, start_hub, target_hub)
         write_text(window, turn_text)
         for drone in drones:
             drone.show(window, drone.corrent_position[0], drone.corrent_position[1])
