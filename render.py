@@ -1,5 +1,3 @@
-# from __future__ import annotations
-
 import pygame
 
 from draw_flags import draw_flags
@@ -8,15 +6,10 @@ from some_parameters import colors
 
 
 class Rendring:
-    @staticmethod
-    def lerp_position(start: tuple[float, float], end: tuple[float, float], progress: float) -> tuple[float, float]:
-        return (
-            start[0] + (end[0] - start[0]) * progress,
-            start[1] + (end[1] - start[1]) * progress,
-        )
+
 
     @staticmethod
-    def draw_connections(window, connections, hubs):
+    def draw_connections(window, connections: list[str, str], hubs: list[Hub]):
         for connection in connections:
             first_hub = Hub.get_hub(connection[0], hubs)
             second_hub = Hub.get_hub(connection[1], hubs)
@@ -56,11 +49,11 @@ class Rendring:
             )
 
     @staticmethod
-    def draw_scene(window, connections, hubs, start_hub, target_hub, drones, turn_text, write_text):
+    def draw_frame(window, connections, hubs, start_hub, target_hub, drones, turn_text, write_text):
         window.fill(colors["background"])
         Rendring.draw_connections(window, connections, hubs)
         Rendring.draw_hubs(window, hubs)
-        for _ in range(10):
+        for _ in range(5):
             draw_flags(window, start_hub, target_hub)
         write_text(window, turn_text)
         for drone in drones:
@@ -68,33 +61,30 @@ class Rendring:
         pygame.display.update()
 
     @staticmethod
-    def animate_movements(
-        window,
-        clock,
-        connections,
-        hubs,
-        start_hub,
-        target_hub,
-        drones,
-        write_text,
-        turn_text,
-        movements,
-        frames: int = 12,
-    ):
-        for frame in range(1, frames + 1):
+    def progress_position(start: tuple[float, float], end: tuple[float, float], progress: float) -> tuple[float, float]:
+        return (
+            start[0] + (end[0] - start[0]) * progress,
+            start[1] + (end[1] - start[1]) * progress,
+        )
+
+    @staticmethod
+    def draw_turn(window, clock, connections, hubs,
+    start_hub, target_hub, drones, write_text, turn_text,
+    movements, frames: int = 30):
+
+        for frame in range(frames):
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
-                    raise SystemExit
+                    exit()
 
             progress = frame / frames
             for drone, start_position, end_position in movements:
-                drone.corrent_position = Rendring.lerp_position(
+                drone.corrent_position = Rendring.progress_position(
                     start_position,
                     end_position,
-                    progress,
-                )
+                    progress)
 
-            Rendring.draw_scene(
+            Rendring.draw_frame(
                 window,
                 connections,
                 hubs,
@@ -105,8 +95,5 @@ class Rendring:
                 write_text,
             )
             clock.tick(60)
-
-        for drone, _, end_position in movements:
-            drone.corrent_position = end_position
 
         return True

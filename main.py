@@ -2,6 +2,7 @@ import sys
 import pygame
 from heapq import heappop, heappush
 from math import inf
+from time import sleep
 
 from some_parameters import colors
 from classes import Hub, Graph, Drone
@@ -76,18 +77,7 @@ def main():
         text_surface = font.render(txt, True, (255, 255, 255))
         window.blit(text_surface, (50, 100))
 
-    hubs: list[Hub] = []
-    connections: list[tuple[str, str, int, str]] = []
-    nb_drones = 0
-    start_hub: Hub | None = None
-    target_hub: Hub | None = None
-
-    hubs, connections, start_hub, target_hub, nb_drones = parsing(hubs, connections, start_hub, target_hub)
-
-    if nb_drones <= 0 or not hubs or start_hub is None or target_hub is None:
-        print("error : invalid map file")
-        sys.exit(0)
-
+    hubs, connections, start_hub, target_hub, nb_drones = parsing()
 
     graph = Graph(hubs, connections)
     static_distances = build_static_distance_map(graph, target_hub)
@@ -101,10 +91,11 @@ def main():
         y = height // 2 + (hub.y - avg_y) * 160
         hub.position_on_window = (x, y)
 
-
+    # init the pygame window
     window = pygame.display.set_mode((width, height))
     window.fill(colors["background"])
     pygame.display.set_caption("fly-in okda ajmi chkt3rf")
+
 
     drones: list[Drone] = [Drone(start_hub, target_hub, index + 1) for index in range(nb_drones)]
     start_hub.corrent_number_of_drones = nb_drones
@@ -168,7 +159,7 @@ def main():
                 drone.current_target = next_hub
                 drone.corrent_position = start_position
                 turn_events.append(f"D{drone.id}-{connection_name}")
-                turn_movements.append((drone, start_position, Rendring.lerp_position(start_position, next_hub.position_on_window, 0.5)))
+                turn_movements.append((drone, start_position, next_hub.position_on_window))
             else:
                 next_hub.corrent_number_of_drones += 1
                 drone.corrent_hub = next_hub
@@ -184,8 +175,7 @@ def main():
         if turn_events:
             turn += 1
             print(turn , " ".join(turn_events))
-
-        Rendring.animate_movements(window, clock, connections, hubs, start_hub,
+        Rendring.draw_turn(window, clock, connections, hubs, start_hub,
             target_hub, drones, write_text, f"turn = {turn}", turn_movements)
 
     pygame.quit()

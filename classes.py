@@ -3,20 +3,17 @@ import os
 import random
 from math import inf
 
-# from dijkstra import djikstra
 from some_parameters import colors
-from draw_flags import draw_flags
 
 
 class Graph:
-    def __init__(self, hubs: list, connections: list):
-        self.nodes: dict[Hub: list[Edge]] = {}
+    def __init__(self, hubs: list, connections: list[str,str,int]):
+        self.nodes: dict[Hub, list[Edge]] = {}
         for connection in connections:
             hub1 = Hub.get_hub(connection[0], hubs)
             hub2 = Hub.get_hub(connection[1], hubs)
             Edge.add_edge(self, hub1, hub2)
             Edge.add_edge(self, hub2, hub1)
-        # print(self)
 
     def __repr__(self):
         rep = ""
@@ -54,6 +51,7 @@ class Hub:
         for hub in hubs:
             if hub.name == name:
                 return hub
+        return None
 
 
     def can_enter_hub(self) -> bool:

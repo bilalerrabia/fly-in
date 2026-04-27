@@ -22,7 +22,14 @@ def parse_connection(line: str) -> tuple[str, str, int]:
     return first, second, capacity
 
 
-def parsing(hubs: list, connections, start_hub, target_hub):
+def parsing():
+
+    hubs: list[Hub] = []
+    connections: list[tuple[str, str, int]] = []
+    nb_drones = -1
+    start_hub: Hub | None = None
+    target_hub: Hub | None = None
+
     try:
         file_path = sys.argv[1]
         with open(file_path) as file_handle:
@@ -30,7 +37,6 @@ def parsing(hubs: list, connections, start_hub, target_hub):
     except (IOError, IndexError) as error:
         print(f"error : {error}")
         sys.exit(0)
-    nb_drones = -1
 
     for raw_line in map_file:
         line = raw_line.strip()
@@ -55,7 +61,7 @@ def parsing(hubs: list, connections, start_hub, target_hub):
                 y=int(data[3]),
                 color=meta_data_dict.get("color", "none"),
                 zone=meta_data_dict.get("zone", "normal"),
-                max_drones=meta_data_dict.get("max_drones", 1),
+                max_drones=int(meta_data_dict.get("max_drones", 1))
             )
             hubs.append(hub)
             if line.startswith("start_hub"):

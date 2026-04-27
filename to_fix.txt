@@ -1,9 +1,11 @@
-render
 rank_next_hubs
 
 
+flage .gif
+boom animation
 parsing
 makefile
 pygame_video
 
+render     done
 classes    done
