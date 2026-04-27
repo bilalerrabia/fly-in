@@ -1,5 +1,6 @@
 import sys
-from classes import Drone, Edge, Graph, Hub
+from classes import Hub
+
 
 def parse_metadata(line: str) -> dict[str, str]:
     metadata: dict[str, str] = {}
@@ -7,9 +8,10 @@ def parse_metadata(line: str) -> dict[str, str]:
         meta_data_str = line[line.find("[") + 1: line.find("]")]
         meta_data_list = meta_data_str.split()
         metadata = {
-            meta_data_list[index].split("=")[0]: meta_data_list[index].split("=")[1]
+            meta_data_list[index].split("=")[0]:
+            meta_data_list[index].split("=")[1]
             for index in range(len(meta_data_list))
-            if "=" in meta_data_list[index]
+            # if "=" in meta_data_list[index]
         }
     return metadata
 
@@ -22,7 +24,7 @@ def parse_connection(line: str) -> tuple[str, str, int]:
     return first, second, capacity
 
 
-def parsing():
+def parsing() -> tuple:
 
     hubs: list[Hub] = []
     connections: list[tuple[str, str, int]] = []
