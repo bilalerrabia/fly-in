@@ -83,7 +83,7 @@ def main() -> None:
 
     font = pygame.font.SysFont("test", 32)
 
-    def write_text(window: pygame.Surface, txt: str) -> None:
+    def write_text(window: pygame.surface.Surface, txt: str) -> None:
         """Render a single status line on the top left window."""
         text_surface = font.render(txt, True, (255, 255, 255))
         window.blit(text_surface, (50, 100))
@@ -103,7 +103,7 @@ def main() -> None:
         hub.position_on_window = (x, y)
 
     # init the pygame window
-    window = pygame.display.set_mode((width, height))
+    window: pygame.surface.Surface = pygame.display.set_mode((width, height))
     window.fill(colors["background"])
     pygame.display.set_caption("fly-in okda ajmi chkt3rf")
 
@@ -112,6 +112,7 @@ def main() -> None:
         for index in range(nb_drones)
         ]
     start_hub.corrent_number_of_drones = nb_drones
+    target_hub.max_drones = nb_drones
 
     clock = pygame.time.Clock()
 
@@ -123,7 +124,11 @@ def main() -> None:
                 run = False
 
         turn_events: list[str] = []
-        turn_movements: list[tuple[Drone, tuple, tuple]] = []
+        turn_movements: list[
+            tuple[
+                Drone, tuple[
+                    float, float], tuple[
+                        float, float]]] = []
         turn_reservations: list[tuple[Hub, Hub]] = []
         arrived_this_turn: set[int] = set()
 

@@ -1,11 +1,16 @@
 rank_next_hubs
 
 
-flage .gif
-boom animation
+correctionSheet
 parsing
-makefile
 pygame_video
+readme subject + correction
+oop parsing
+from __future__ import annotations
 
+
+eszy/01    done
+makefile   done
+flage .gif done
 render     done
 classes    done

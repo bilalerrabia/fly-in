@@ -2,7 +2,7 @@ import pygame
 from typing import Callable
 
 from draw_flags import draw_flags
-from classes import Hub
+from classes import Hub, Drone
 from some_parameters import colors
 
 
@@ -10,7 +10,8 @@ class Rendring:
 
     @staticmethod
     def draw_connections(
-            window: pygame.Surface, connections: list[tuple[str, str]],
+            window: pygame.surface.Surface,
+            connections: list[tuple[str, str, int]],
             hubs: list[Hub]) -> None:
         for connection in connections:
             first_hub = Hub.get_hub(connection[0], hubs)
@@ -36,7 +37,7 @@ class Rendring:
             )
 
     @staticmethod
-    def draw_hubs(window: pygame.Surface, hubs: list[Hub]) -> None:
+    def draw_hubs(window: pygame.surface.Surface, hubs: list[Hub]) -> None:
         for hub in hubs:
             if hub.color == "none" or hub.color not in colors:
                 draw_color = colors["green"]
@@ -54,9 +55,11 @@ class Rendring:
 
     @staticmethod
     def draw_frame(
-            window: pygame.Surface, connections: list, hubs: list,
-            start_hub: Hub, target_hub: Hub, drones: list, turn_text: str,
-            write_text: Callable) -> None:
+            window: pygame.surface.Surface,
+            connections: list[tuple[str, str, int]], hubs: list[Hub],
+            start_hub: Hub, target_hub: Hub, drones: list[Drone],
+            turn_text: str,
+            write_text: Callable[[pygame.surface.Surface, str], None]) -> None:
         window.fill(colors["background"])
         draw_flags(window, start_hub, target_hub)
         Rendring.draw_connections(window, connections, hubs)
@@ -79,11 +82,13 @@ class Rendring:
 
     @staticmethod
     def draw_turn(
-            window: pygame.pygame.Surface, clock: pygame.time.Clock,
-            connections: list, hubs: list,
-            start_hub: Hub, target_hub: Hub, drones: list,
-            write_text: Callable,
-            turn_text: str, movements: list, frames: int = 30) -> bool:
+            window: pygame.surface.Surface, clock: pygame.time.Clock,
+            connections: list[tuple[str, str, int]], hubs: list[Hub],
+            start_hub: Hub, target_hub: Hub, drones: list[Drone],
+            write_text: Callable[[pygame.surface.Surface, str], None],
+            turn_text: str, movements: list[
+                tuple[Drone, tuple[float, float], tuple[float, float]]],
+            frames: int = 30) -> bool:
 
         for frame in range(frames):
             for event in pygame.event.get():

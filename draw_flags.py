@@ -10,7 +10,7 @@ counter_purk = 0
 
 
 def draw_flags(
-        window: pygame.Surface,
+        window: pygame.surface.Surface,
         start_hub: Hub, target_hub: Hub) -> None:
     global frame_index_iran
     global frame_index_purk

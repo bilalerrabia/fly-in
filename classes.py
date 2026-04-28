@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import pygame
 import os
 import random
@@ -15,7 +17,7 @@ class Hub:
         self.color = color
         self.zone = zone
         self.max_drones = int(max_drones)
-        self.position_on_window = (-1, -1)
+        self.position_on_window: tuple[float, float] = (-1, -1)
         self.cost: float = self.get_cost(self)
         self.corrent_number_of_drones = 0
 
@@ -31,7 +33,7 @@ class Hub:
         return inf
 
     @staticmethod
-    def get_hub(name: str, hubs: list) -> Any:
+    def get_hub(name: str, hubs: list[Hub]) -> Any:
         for hub in hubs:
             if hub.name == name:
                 return hub
@@ -73,8 +75,8 @@ class Edge:
         self.target: Hub = target
 
     @staticmethod
-    def is_there(name: str, list_hubs: list) -> bool:
-        for edge in list_hubs:
+    def is_there(name: str, list_edges: list[Edge]) -> bool:
+        for edge in list_edges:
             if name == edge.target.name:
                 return True
         return False
@@ -96,16 +98,19 @@ class Edge:
 class Drone:
 
     def __init__(self, start_hub: Hub, target_hub: Hub, Id: int):
-        drones_imgs = os.listdir("fotos")
-        self.img_path = f"fotos/{random.choice(drones_imgs)}"
+        drones_imgs = os.listdir("photos")
+        self.img_path = f"photos/{random.choice(drones_imgs)}"
         self.img = pygame.transform.scale(
             pygame.image.load(self.img_path), (70, 70))
         self.id = Id
         self.corrent_hub = start_hub
-        self.corrent_position = start_hub.position_on_window
+        i_hate_E501: tuple[float, float] = start_hub.position_on_window
+        self.corrent_position: tuple[float, float] = i_hate_E501
         self.current_target: Hub | None = None
         self.reach_target: bool = False
         self.in_transit: bool = False
 
-    def show(self, window: pygame.Surface, img_x: int, img_y: int) -> None:
+    def show(
+            self, window: pygame.surface.Surface,
+            img_x: float, img_y: float) -> None:
         window.blit(self.img, (img_x - 30, img_y - 30))

@@ -23,12 +23,14 @@ def parse_connection(line: str) -> tuple[str, str, int]:
     capacity = int(metadata.get("max_link_capacity", 1))
     return first, second, capacity
 
+# hubs, connections, start_hub, target_hub, nb_drones
 
-def parsing() -> tuple:
+
+def parsing() -> tuple[list[Hub], list[tuple[str, str, int]], Hub, Hub, int]:
 
     hubs: list[Hub] = []
     connections: list[tuple[str, str, int]] = []
-    nb_drones = -1
+    nb_drones: int = -1
     start_hub: Hub | None = None
     target_hub: Hub | None = None
 
