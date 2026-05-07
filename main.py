@@ -1,8 +1,6 @@
-# import sys
 import pygame
 from heapq import heappop, heappush
 from math import inf
-# from time import sleep
 
 from some_parameters import colors
 from classes import Hub, Graph, Drone
@@ -88,7 +86,11 @@ def main() -> None:
         text_surface = font.render(txt, True, (255, 255, 255))
         window.blit(text_surface, (50, 100))
 
-    hubs, connections, start_hub, target_hub, nb_drones = parsing()
+    try:
+        hubs, connections, start_hub, target_hub, nb_drones = parsing()
+    except ValueError as e:
+        print(e)
+        exit()
 
     graph = Graph(hubs, connections)
     static_distances = build_static_distance_map(graph, target_hub)

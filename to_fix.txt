@@ -7,10 +7,16 @@ pygame_video
 readme subject + correction
 oop parsing
 from __future__ import annotations
+docstrings
 
 
-eszy/01    done
-makefile   done
-flage .gif done
-render     done
-classes    done
+callmemaybe code
+uv, toml
+
+[
+    os.environ.get('VIRTUAL_ENV')
+    site.getsitepackages()[0]
+    sys.executable
+    from dotenv import load_dotenv
+    os.getenv("MATRIX_MODE", "development")
+]
