@@ -38,6 +38,9 @@ class Rendring:
 
     @staticmethod
     def draw_hubs(window: pygame.surface.Surface, hubs: list[Hub]) -> None:
+        sidna = pygame.image.load("flags/sidna.jpg")
+        sidna = pygame.transform.scale(sidna, (230, 350))
+        window.blit(sidna, (0, 650))
         for hub in hubs:
             if hub.color == "none" or hub.color not in colors:
                 draw_color = colors["green"]
@@ -52,6 +55,7 @@ class Rendring:
                     hub.position_on_window[1]),
                 20,
             )
+
 
     @staticmethod
     def draw_frame(
