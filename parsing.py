@@ -1,8 +1,10 @@
 import sys
 from classes import Hub
 
+
 class ParsingError(Exception):
     pass
+
 
 def parse_metadata(line: str, counter: int) -> dict[str, str]:
     metadata: dict[str, str] = {}
@@ -27,22 +29,33 @@ def parse_metadata(line: str, counter: int) -> dict[str, str]:
             key = key.strip()
             value = value.strip()
             if not key or not value:
-                raise ParsingError(f"invalid key=value on line {counter}\n{line}")
+                raise ParsingError(
+                    f"invalid key=value on line "
+                    f"{counter}\n{line}")
             if metadata.get(key, -1) != -1:
-                raise ParsingError(f"override metadata on line {counter}\n{line}")
+                raise ParsingError(
+                    "override metadata on line "
+                    f"{counter}\n{line}")
             metadata[key] = value
-    elif ("[" in line and "]" not in line or
-        "]" in line and "[" not in line):
+    elif (
+            "[" in line and "]" not in line or
+            "]" in line and "[" not in line):
         raise ParsingError(f"invalid metadata (line = {counter})\n{line}")
     return metadata
 
 
-def parse_hub(hubs: list[Hub], line: str, counter: int):
+def parse_hub(hubs: list[Hub], line: str, counter: int) -> Hub:
     data = line.split()
     meta_data_dict = parse_metadata(line, counter)
     for meta_data in meta_data_dict.keys():
-        if meta_data == "max_drones" and  0 >= int(meta_data_dict["max_drones"]):
-            raise ParsingError(f"invalid number for max_drones (line = {counter})\n{line}")
+        if (
+                meta_data == "max_drones" and
+                0 >= int(meta_data_dict["max_drones"])
+        ):
+            raise ParsingError(
+                "invalid number for max_drones (line = "
+                f"{counter})\n{line}"
+                )
         if meta_data.lower() not in ["color", "max_drones", "zone"]:
             raise ParsingError(
                 "invalid metadata for hubs you can use only"
@@ -50,9 +63,12 @@ def parse_hub(hubs: list[Hub], line: str, counter: int):
                 f"\n{line}"
                 )
 
-    if meta_data_dict.get("zone", "normal") not in ["blocked", "normal", "restricted", "priority"]:
-        print(f"invalid zone type (line = {counter})")
-        exit()
+    if (
+            meta_data_dict.get("zone", "normal") not in
+            ["blocked", "normal", "restricted", "priority"]):
+        raise ParsingError(
+            f"invalid zone type (line = {counter}) you can use only "
+            f"['blocked', 'normal', 'restricted', 'priority'] \n{line}")
 
     hub = Hub(
         name=data[1],
@@ -64,7 +80,7 @@ def parse_hub(hubs: list[Hub], line: str, counter: int):
     )
     for other_hub in hubs:
         if (hub.x, hub.y) == (other_hub.x, other_hub.y):
-            raise ParsingError(f" two hubs with the same coordinates \n{line}")
+            raise ParsingError(f"two hubs with the same coordinates \n{line}")
     return hub
 
 
@@ -72,15 +88,23 @@ def hub_name_exists(name: str, hubs: list[Hub]) -> bool:
     return Hub.get_hub(name, hubs) is not None
 
 
-def parse_connection(hubs: list[Hub], line: str, counter: int) -> tuple[str, str, int]:
+def parse_connection(
+        hubs: list[Hub], line: str,
+        counter: int) -> tuple[str, str, int]:
     connection_names = line.split()[1]
     if connection_names.count("-") != 1:
-        raise ParsingError(f"invalid connection line (line = {counter})\n{line}")
+        raise ParsingError(
+            f"invalid connection line (line = {counter})\n{line}")
     first, second = connection_names.split("-")
     if first == second:
-        raise ParsingError(f"(mn nytk ajmi) invalid connection between the same hub in line {counter}\n{line}")
-    if Hub.get_hub(first, hubs) not in hubs or Hub.get_hub(second, hubs) not in hubs:
-        raise ParsingError(f"invalid hub name in connection line (line = {counter})\n{line}")
+        raise ParsingError(
+            "(mn nytk ajmi) invalid connection between the same hub "
+            f"in line {counter}\n{line}")
+    if (
+            Hub.get_hub(first, hubs) not in hubs
+            or Hub.get_hub(second, hubs) not in hubs):
+        raise ParsingError(
+            f"invalid hub name in connection line (line = {counter})\n{line}")
     meta_data_dict: dict[str, str] = parse_metadata(line, counter)
     for meta_data in meta_data_dict:
         if meta_data not in ["max_link_capacity"]:
@@ -107,8 +131,7 @@ def parsing() -> tuple[list[Hub], list[tuple[str, str, int]], Hub, Hub, int]:
         with open(file_path) as file_handel:
             map_file = file_handel.readlines()
     except Exception as error:
-        print(f"error : {error}")
-        sys.exit(0)
+        raise ParsingError(f"error : {error}")
 
     counter: int = 0
     try:
@@ -119,70 +142,88 @@ def parsing() -> tuple[list[Hub], list[tuple[str, str, int]], Hub, Hub, int]:
                 continue
 
             elif line.count(":") != 1:
-                    raise ParsingError(f"invalid line (line = {counter}) \n {line}")
+                raise ParsingError(
+                    f"invalid line (line = {counter}) \n {line}")
 
             elif line.find("==") != -1:
-                raise ParsingError(f"invalid syntax in line = {counter} \n{line}")
+                raise ParsingError(
+                    f"invalid syntax in line = {counter} \n{line}")
             elif line.startswith("nb_drones"):
                 if line.count(":") != 1:
-                    raise ParsingError(f"invalid line for nb_drones (line = {counter}) \n {line}")
+                    raise ParsingError(
+                        "invalid line for nb_drones (line = "
+                        f"{counter}) \n {line}")
                 if hubs or connections:
-                    raise ParsingError(f"nb_drones have to be define first (line = {counter})\n{line}")
+                    raise ParsingError(
+                        f"nb_drones have to be define "
+                        f"first (line = {counter})\n{line}")
                 if nb_drones != -1:
-                    print(f"too many declaration for nb_drones (line = {counter})")
-                    exit()
+                    raise ParsingError(
+                        "too many declaration for nb_drones "
+                        f"(line = {counter}) \n{line}")
                 nb_drones = int(line.split(":")[1])
                 if nb_drones < 0:
-                    raise ParsingError(f"nb_drones can't be negative line = {counter} \n{line}")
+                    raise ParsingError(
+                        "nb_drones can't be negative "
+                        f"line = {counter} \n{line}")
                 continue
 
             elif line.startswith("start_hub"):
                 if start_hub:
-                    print(f"too many declaration for start_hub (line = {counter})")
-                    exit()
+                    raise ParsingError(
+                        "too many declaration for start_hub "
+                        f"(line = {counter})\n{line}")
                 start_hub = parse_hub(hubs, line, counter)
                 if start_hub.max_drones < nb_drones:
-                    raise ParsingError(f"start_hub max_drones not enough for the nb_drones (line = {counter})\n{line}")
-                # if hub_name_exists(start_hub.name, hubs):
-                #     print(f"double declaration for {start_hub.name} hub (line = {counter})")
-                #     exit()
+                    raise ParsingError(
+                        "start_hub max_drones not enough for "
+                        f"the nb_drones (line = {counter})\n{line}")
                 hubs.append(start_hub)
                 continue
 
             elif line.startswith("hub"):
                 hub = parse_hub(hubs, line, counter)
                 if hub_name_exists(hub.name, hubs):
-                    print(f"double declaration for {hub.name} hub (line = {counter})")
-                    exit()
+                    raise ParsingError(
+                        f"double declaration for {hub.name}"
+                        f" hub (line = {counter}) \n{line}")
+
                 hubs.append(hub)
                 continue
 
             elif line.startswith("end_hub"):
                 if end_hub:
-                    print(f"too many declaration for end_hub (line = {counter})")
-                    exit()
+                    raise ParsingError(
+                        "too many declaration for end_hub"
+                        f" (line = {counter}) \n{line}")
+
                 end_hub = parse_hub(hubs, line, counter)
                 if hub_name_exists(end_hub.name, hubs):
-                    print(f"double declaration for {end_hub.name} hub (line = {counter})")
-                    exit()
+                    raise ParsingError(
+                        f"double declaration for {end_hub.name} "
+                        f"hub (line = {counter}) \n{line}")
+
                 hubs.append(end_hub)
                 continue
 
             elif line.startswith("connection"):
                 connection = parse_connection(hubs, line, counter)
                 if (
-                    connection in connections or 
-                    (connection[1], connection[0], connection[2]) in connections):
+                        connection in connections or
+                        (connection[1], connection[0], connection[2]) in
+                        connections):
                     raise ParsingError(
                         "two connections between two hubs with the"
                         f" same max_link_capacity on line {counter}\n{line}")
                 connections.append(connection)
             else:
-                raise ParsingError(f"invalid line at (line= {counter})\n{line}")
+                raise ParsingError(
+                    f"invalid line at (line= {counter})\n{line}")
 
         if start_hub is None or end_hub is None or nb_drones == -1:
-            print("error : missing start_hub or end_hub or nb_drones")
-            exit()
+            raise ParsingError(
+                "missing start_hub or end_hub or nb_drones")
+
     except Exception as e:
         raise ParsingError(f"error: {e}")
     return hubs, connections, start_hub, end_hub, nb_drones
