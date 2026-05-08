@@ -88,7 +88,7 @@ def main() -> None:
 
     try:
         hubs, connections, start_hub, target_hub, nb_drones = parsing()
-    except ValueError as e:
+    except Exception as e:
         print(e)
         exit()
 
