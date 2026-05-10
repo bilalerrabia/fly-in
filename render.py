@@ -56,7 +56,6 @@ class Rendring:
                 20,
             )
 
-
     @staticmethod
     def draw_frame(
             window: pygame.surface.Surface,

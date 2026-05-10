@@ -1,5 +1,5 @@
 
-colors = {
+colors: dict[str, tuple[int, int, int]] = {
     "black": (0, 0, 0),
     "gray": (127, 127, 127),
     "background": (0, 204, 204),

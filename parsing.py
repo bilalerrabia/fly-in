@@ -137,6 +137,7 @@ def parsing() -> tuple[list[Hub], list[tuple[str, str, int]], Hub, Hub, int]:
     try:
         for raw_line in map_file:
             line = raw_line.strip()
+            line = line.split("#")[0]
             counter += 1
             if not line or line.startswith("#"):
                 continue
@@ -202,6 +203,10 @@ def parsing() -> tuple[list[Hub], list[tuple[str, str, int]], Hub, Hub, int]:
                     raise ParsingError(
                         f"double declaration for {end_hub.name} "
                         f"hub (line = {counter}) \n{line}")
+                if end_hub.max_drones < nb_drones:
+                    raise ParsingError(
+                        "end_hub max_drones not enough for "
+                        f"the nb_drones (line = {counter})\n{line}")
 
                 hubs.append(end_hub)
                 continue
