@@ -2,7 +2,6 @@ import pygame
 from heapq import heappop, heappush
 from math import inf
 
-from some_parameters import colors
 from classes import Hub, Graph, Drone
 from render import Rendring
 from parsing import parsing
@@ -37,6 +36,17 @@ def build_static_distance_map(
     return distances
 
 
+def has_forward_path(
+        graph: Graph,
+        static_distances: dict[Hub, float],
+        hub: Hub,
+        hub_distance: float) -> bool:
+    return any(
+        static_distances.get(edge.target, inf) < hub_distance
+        for edge in graph.nodes.get(hub, [])
+    )
+
+
 def rank_next_hubs(
     graph: Graph,
     current_hub: Hub,
@@ -51,25 +61,18 @@ def rank_next_hubs(
     for edge in graph.nodes.get(current_hub, []):
         next_hub = edge.target
         next_distance = static_distances.get(next_hub, inf)
-        if (
-            next_distance == inf or
-            next_distance > current_distance or
-            not next_hub.can_enter_hub()
-        ):
+        if next_distance == inf or next_distance > current_distance:
+            continue
+        if not next_hub.can_enter_hub():
             continue
 
-        has_forward_path = any(
-            static_distances.get(next_edge.target, inf) < next_distance
-            for next_edge in graph.nodes.get(next_hub, [])
-        )
-        if next_hub != target_hub and not has_forward_path:
+        forward_path = has_forward_path(
+            graph, static_distances, next_hub, next_distance)
+        if next_hub != target_hub and not forward_path:
             continue
 
         ranked_candidates.append(
-            (
-                next_distance,
-                not has_forward_path, next_hub
-            ))
+            (next_distance, not forward_path, next_hub))
 
     ranked_candidates.sort(key=lambda item: (item[0], item[1], item[2].name))
     return [hub for _, _, hub in ranked_candidates]
@@ -106,15 +109,12 @@ def main() -> None:
 
     # init the pygame window
     window: pygame.surface.Surface = pygame.display.set_mode((width, height))
-    window.fill(colors["background"])
     pygame.display.set_caption("fly-in okda ajmi chkt3rf")
 
     drones: list[Drone] = [
-        Drone(start_hub, target_hub, index + 1)
+        Drone(start_hub, index + 1)
         for index in range(nb_drones)
         ]
-    start_hub.corrent_number_of_drones = nb_drones
-    target_hub.max_drones = nb_drones
 
     clock = pygame.time.Clock()
 
@@ -131,7 +131,6 @@ def main() -> None:
                 Drone, tuple[
                     float, float], tuple[
                         float, float]]] = []
-        turn_reservations: list[tuple[Hub, Hub]] = []
         arrived_this_turn: set[int] = set()
 
         for drone in drones:
@@ -178,30 +177,24 @@ def main() -> None:
                 continue
 
             source_hub = drone.corrent_hub
-            connection_name = f"{source_hub.name}-{next_hub.name}"
-            source_hub.corrent_number_of_drones -= 1
             start_position = source_hub.position_on_window
+            end_position = next_hub.position_on_window
+
+            source_hub.corrent_number_of_drones -= 1
+            next_hub.corrent_number_of_drones += 1
+            drone.current_target = next_hub
+            drone.corrent_position = start_position
+            turn_movements.append((drone, start_position, end_position))
 
             if next_hub.zone == "restricted":
-                next_hub.corrent_number_of_drones += 1
                 drone.in_transit = True
-                drone.current_target = next_hub
-                drone.corrent_position = start_position
-                turn_events.append(f"D{drone.id}-{connection_name}")
-                turn_movements.append(
-                    (drone, start_position, next_hub.position_on_window))
+                turn_events.append(
+                    f"D{drone.id}-{source_hub.name}-{next_hub.name}")
             else:
-                next_hub.corrent_number_of_drones += 1
                 drone.corrent_hub = next_hub
-                drone.corrent_position = next_hub.position_on_window
-                drone.corrent_position = start_position
-                drone.current_target = next_hub
                 turn_events.append(f"D{drone.id}-{next_hub.name}")
                 if next_hub == target_hub:
                     drone.reach_target = True
-                turn_reservations.append((source_hub, next_hub))
-                turn_movements.append(
-                    (drone, start_position, next_hub.position_on_window))
 
         if turn_events:
             turn += 1

@@ -4,7 +4,6 @@ import pygame
 import os
 import random
 from math import inf
-from typing import Any
 
 
 class Hub:
@@ -18,34 +17,29 @@ class Hub:
         self.zone = zone
         self.max_drones = int(max_drones)
         self.position_on_window: tuple[float, float] = (-1, -1)
-        self.cost: float = self.get_cost(self)
+        self.cost: float = self.get_cost(self.zone)
         self.corrent_number_of_drones = 0
 
-    def get_cost(self, hub: Any) -> float:
-        if hub.zone == "blocked":
-            return inf
-        elif hub.zone == "priority":
-            return 0.5
-        elif hub.zone == "normal":
-            return 1
-        elif hub.zone == "restricted":
-            return 2
-        return inf
+    @staticmethod
+    def get_cost(zone: str) -> float:
+        return {
+            "blocked": inf,
+            "priority": 0.5,
+            "normal": 1,
+            "restricted": 2,
+        }.get(zone, inf)
 
     @staticmethod
-    def get_hub(name: str, hubs: list[Hub]) -> Any:
-        for hub in hubs:
-            if hub.name == name:
-                return hub
-        return None
+    def get_hub(name: str, hubs: list[Hub]) -> Hub | None:
+        return next((hub for hub in hubs if hub.name == name), None)
 
     def can_enter_hub(self) -> bool:
-        if self.zone == "blocked":
-            return False
-        return self.corrent_number_of_drones < self.max_drones
+        return (
+            self.zone != "blocked" and
+            self.corrent_number_of_drones < self.max_drones)
 
-    def __lt__(self, other: Any) -> bool:
-        return self.get_cost(self) < self.get_cost(other)
+    def __lt__(self, other: Hub) -> bool:
+        return self.cost < other.cost
 
     def __repr__(self) -> str:
         return self.name
@@ -76,20 +70,16 @@ class Edge:
 
     @staticmethod
     def is_there(name: str, list_edges: list[Edge]) -> bool:
-        for edge in list_edges:
-            if name == edge.target.name:
-                return True
-        return False
+        return any(name == edge.target.name for edge in list_edges)
 
     @staticmethod
-    def add_edge(graph: Graph, hub1: Hub, hub2: Hub) -> None:
-        if graph.nodes.get(hub1, None) is None:
-            edge = Edge(hub2.cost, hub2)
-            graph.nodes[hub1] = [edge]
-        else:
-            edge = Edge(hub2.cost, hub2)
-            if not Edge.is_there(hub2.name, graph.nodes[hub1]):
-                graph.nodes[hub1].append(edge)
+    def add_edge(graph: Graph, hub1: Hub | None, hub2: Hub | None) -> None:
+        if hub1 is None or hub2 is None:
+            return
+
+        neighbors = graph.nodes.setdefault(hub1, [])
+        if not Edge.is_there(hub2.name, neighbors):
+            neighbors.append(Edge(hub2.cost, hub2))
 
     def __repr__(self) -> str:
         return f"cost={self.cost} target={self.target}"
@@ -97,15 +87,14 @@ class Edge:
 
 class Drone:
 
-    def __init__(self, start_hub: Hub, target_hub: Hub, Id: int):
-        drones_imgs = os.listdir("photos")
-        self.img_path = f"photos/{random.choice(drones_imgs)}"
+    def __init__(self, start_hub: Hub, drone_id: int):
+        self.img_path = f"photos/{random.choice(os.listdir('photos'))}"
         self.img = pygame.transform.scale(
             pygame.image.load(self.img_path), (70, 70))
-        self.id = Id
+        self.id = drone_id
         self.corrent_hub = start_hub
-        i_hate_E501: tuple[float, float] = start_hub.position_on_window
-        self.corrent_position: tuple[float, float] = i_hate_E501
+        self.corrent_position: tuple[float, float] = (0, 0)
+        self.corrent_position = start_hub.position_on_window
         self.current_target: Hub | None = None
         self.reach_target: bool = False
         self.in_transit: bool = False

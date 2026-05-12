@@ -62,6 +62,9 @@ def parse_hub(hubs: list[Hub], line: str, counter: int) -> Hub:
                 f"['color', 'max_drones', 'zone'] (line = {counter})"
                 f"\n{line}"
                 )
+        if meta_data == "color":
+            if not meta_data_dict.get("color").isalpha():
+                raise ParsingError(f"invalid color, line = {counter}\n{line}")
 
     if (
             meta_data_dict.get("zone", "normal") not in
