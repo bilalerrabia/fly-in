@@ -1,3 +1,5 @@
+"""Pygame drawing helpers for the Fly-In graph and drone animation."""
+
 import pygame
 from typing import Callable
 
@@ -7,12 +9,15 @@ from some_parameters import colors
 
 
 class Rendring:
+    """Draw the simulation scene and animate drone movement."""
 
     @staticmethod
     def draw_connections(
             window: pygame.surface.Surface,
             connections: list[tuple[str, str, int]],
             hubs: list[Hub]) -> None:
+        """Draw every declared connection with
+        a color derived from the first hub."""
         for connection in connections:
             first_hub = Hub.get_hub(connection[0], hubs)
             second_hub = Hub.get_hub(connection[1], hubs)
@@ -38,6 +43,7 @@ class Rendring:
 
     @staticmethod
     def draw_hubs(window: pygame.surface.Surface, hubs: list[Hub]) -> None:
+        """Draw every hub as a filled circle using its configured color."""
         for hub in hubs:
             if hub.color == "none" or hub.color not in colors:
                 draw_color = colors["green"]
@@ -60,6 +66,7 @@ class Rendring:
             start_hub: Hub, target_hub: Hub, drones: list[Drone],
             turn_text: str,
             write_text: Callable[[pygame.surface.Surface, str], None]) -> None:
+        """Redraw the full scene for the current animation frame."""
         window.fill(colors["background"])
         Flags.draw_flags(window, start_hub, target_hub)
         Rendring.draw_connections(window, connections, hubs)
@@ -75,6 +82,8 @@ class Rendring:
     def progress_position(
             start: tuple[float, float], end: tuple[float, float],
             progress: float) -> tuple[float, float]:
+        """Interpolate a point between start and end
+        using progress in [0, 1]."""
         return (
             start[0] + (end[0] - start[0]) * progress,
             start[1] + (end[1] - start[1]) * progress,
@@ -89,6 +98,7 @@ class Rendring:
             turn_text: str, movements: list[
                 tuple[Drone, tuple[float, float], tuple[float, float]]],
             frames: int = 30) -> None:
+        """Animate one simulation turn over a fixed number of frames."""
 
         for frame in range(frames):
             for event in pygame.event.get():

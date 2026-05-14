@@ -1,3 +1,4 @@
+"""Shared color palette used by the Fly-In renderer."""
 
 colors: dict[str, tuple[int, int, int]] = {
     "black": (0, 0, 0),

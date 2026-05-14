@@ -1,3 +1,5 @@
+"""Animated start and target flags for the Fly-In renderer."""
+
 import pygame
 from classes import Hub
 
@@ -10,11 +12,13 @@ counter_purk = 0
 
 
 class Flags:
+    """Manage the animated flags shown above the start and target hubs."""
 
     @staticmethod
     def draw_flags(
             window: pygame.surface.Surface,
             start_hub: Hub, target_hub: Hub) -> None:
+        """Advance the flag animations and blit them near the given hubs."""
         global frame_index_iran
         global frame_index_purk
         global counter_iran

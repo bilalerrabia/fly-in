@@ -8,11 +8,13 @@ from typing import Any
 
 
 class Solver:
+    """Turn-based routing helpers for the drone scheduler."""
 
     @staticmethod
     def build_static_distance_map(
             graph: Graph,
             target_hub: Hub) -> dict[Hub, float]:
+        """Compute the cheapest known distance from each hub to the target."""
         distances: dict[Hub, float] = {target_hub: 0.0}
 
         queue: list[tuple[float, Hub]] = []
@@ -39,6 +41,7 @@ class Solver:
         current_hub: Any,
         static_distances: dict[Hub, float],
     ) -> list[Hub]:
+        """Return neighbor hubs ordered by reverse distance from the target."""
         current_distance: float = static_distances.get(current_hub, inf)
 
         ranked_candidates: list[tuple[float, Hub]] = []
@@ -58,6 +61,7 @@ class Solver:
 
 
 def main() -> None:
+    """Run the pygame simulation for the map given on sys.argv[1]."""
 
     pygame.init()
 

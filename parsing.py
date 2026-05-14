@@ -1,13 +1,20 @@
+"""Parse Fly-In map files into hubs, connections, and simulation settings."""
+
 import sys
 from classes import Hub
 
 
 class ParsingError(Exception):
+    """Raised when a map file violates the Fly-In syntax or rules."""
+
     pass
 
 
 class Parsing:
+    """Validate and convert the custom map format into runtime objects."""
+
     def parse_metadata(self, line: str, counter: int) -> dict[str, str]:
+        """Extract bracketed key=value metadata from a map line."""
         metadata: dict[str, str] = {}
         if line.find("[") > line.find("]"):
             raise ParsingError(f"invalid meta_data line {counter}\n{line}")
@@ -48,6 +55,7 @@ class Parsing:
     def parse_hub(
             self, hubs: list[Hub], line: str,
             counter: int, nb_drones: int) -> Hub:
+        """Parse a hub declaration into a Hub instance."""
         data = line.split()
         meta_data_dict = self.parse_metadata(line, counter)
         for meta_data in meta_data_dict.keys():
@@ -102,11 +110,13 @@ class Parsing:
         return hub
 
     def hub_name_exists(self, name: str, hubs: list[Hub]) -> bool:
+        """Return True when a hub with the given name is already known."""
         return Hub.get_hub(name, hubs) is not None
 
     def parse_connection(
             self, hubs: list[Hub], line: str,
             counter: int) -> tuple[str, str, int]:
+        """Parse a connection declaration into a named edge tuple."""
         connection_names = line.split()[1]
         if connection_names.count("-") != 1:
             raise ParsingError(
@@ -136,6 +146,7 @@ class Parsing:
     def parsing(
         self) -> tuple[
             list[Hub], list[tuple[str, str, int]], Hub, Hub, int]:
+        """Read the map file from sys.argv and return the simulation inputs."""
 
         hubs: list[Hub] = []
         hub: Hub | None = None
