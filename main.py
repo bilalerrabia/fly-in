@@ -60,17 +60,19 @@ class Solver:
         return res
 
 
-def main() -> None:
-    """Run the pygame simulation for the map given on sys.argv[1]."""
+class WriteText:
 
-    pygame.init()
-
-    font = pygame.font.SysFont("test", 32)
-
+    @staticmethod
     def write_text(window: pygame.surface.Surface, txt: str) -> None:
+        pygame.init()
+        font = pygame.font.SysFont("", 32)
         """Render a single status line on the top left window."""
         text_surface = font.render(txt, True, (255, 255, 255))
         window.blit(text_surface, (50, 100))
+
+
+def main() -> None:
+    """Run the pygame simulation for the map given on sys.argv[1]."""
 
     try:
         (
@@ -168,7 +170,8 @@ def main() -> None:
 
         Rendring.draw_turn(
             window, clock, connections, hubs, start_hub,
-            target_hub, drones, write_text, f"turn = {turn}", turn_movements)
+            target_hub, drones, WriteText.write_text,
+            f"turn = {turn}", turn_movements)
 
     pygame.quit()
 
