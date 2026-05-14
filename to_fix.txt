@@ -1,18 +1,17 @@
-rank_next_hubs
 
 
 correctionSheet
-parsing
 pygame_video
 readme subject + correction
-oop parsing
 from __future__ import annotations
 docstrings
-
-callmemaybe code
-uv, toml
+from heapq import heappop, heappush
+graph video
+graph problems
 
 [
+    callmemaybe code
+    uv, toml
     os.environ.get('VIRTUAL_ENV')
     site.getsitepackages()[0]
     sys.executable
@@ -20,3 +19,9 @@ uv, toml
     os.getenv("MATRIX_MODE", "development")
 ]
 protocol
+
+
+
+
+in_transit tells you whether a drone is still traveling across turns.
+arrived_this_turn tells you whether a drone already finished its travel during this specific turn, so the second pass must skip it.

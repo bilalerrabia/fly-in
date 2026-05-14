@@ -1,81 +1,60 @@
 import pygame
 from heapq import heappop, heappush
 from math import inf
-
 from classes import Hub, Graph, Drone
 from render import Rendring
-from parsing import parsing
+from parsing import Parsing
+from typing import Any
 
 
-def build_static_distance_map(
+class Solver:
+
+    @staticmethod
+    def build_static_distance_map(
+            graph: Graph,
+            target_hub: Hub) -> dict[Hub, float]:
+        distances: dict[Hub, float] = {target_hub: 0.0}
+
+        queue: list[tuple[float, Hub]] = []
+        heappush(queue, (0.0, target_hub))
+
+        while queue:
+            distance, hub = heappop(queue)
+
+            for edge in graph.nodes.get(hub, []):
+                neighbor = edge.target
+                if neighbor.zone == "blocked":
+                    continue
+
+                new_distance = distance + neighbor.cost
+                if new_distance < distances.get(neighbor, inf):
+                    distances[neighbor] = new_distance
+                    heappush(queue, (new_distance, neighbor))
+
+        return distances
+
+    @staticmethod
+    def rank_next_hubs(
         graph: Graph,
-        target_hub: Hub) -> dict[Hub, float]:
-    distances: dict[Hub, float] = {target_hub: 0.0}
+        current_hub: Any,
+        static_distances: dict[Hub, float],
+    ) -> list[Hub]:
+        current_distance: float = static_distances.get(current_hub, inf)
 
-    queue: list[tuple[float, Hub]] = []
-    heappush(queue, (0.0, target_hub))
-
-    while queue:
-        distance, hub = heappop(queue)
-        if distance > distances.get(hub, inf):
-            continue
-
-        if hub.zone == "blocked":
-            continue
-
-        for edge in graph.nodes.get(hub, []):
-            neighbor = edge.target
-            if neighbor.zone == "blocked":
+        ranked_candidates: list[tuple[float, Hub]] = []
+        for edge in graph.nodes.get(current_hub, []):
+            next_hub = edge.target
+            next_distance: float = static_distances.get(next_hub, inf)
+            if next_distance > current_distance:
+                continue
+            if not next_hub.can_enter_hub():
                 continue
 
-            new_distance = distance + neighbor.cost
-            if new_distance < distances.get(neighbor, inf):
-                distances[neighbor] = new_distance
-                heappush(queue, (new_distance, neighbor))
+            ranked_candidates.append((next_distance, next_hub))
 
-    return distances
-
-
-def has_forward_path(
-        graph: Graph,
-        static_distances: dict[Hub, float],
-        hub: Hub,
-        hub_distance: float) -> bool:
-    return any(
-        static_distances.get(edge.target, inf) < hub_distance
-        for edge in graph.nodes.get(hub, [])
-    )
-
-
-def rank_next_hubs(
-    graph: Graph,
-    current_hub: Hub,
-    target_hub: Hub,
-    static_distances: dict[Hub, float],
-) -> list[Hub]:
-    current_distance = static_distances.get(current_hub, inf)
-    if current_distance == inf:
-        return []
-
-    ranked_candidates: list[tuple[float, bool, Hub]] = []
-    for edge in graph.nodes.get(current_hub, []):
-        next_hub = edge.target
-        next_distance = static_distances.get(next_hub, inf)
-        if next_distance == inf or next_distance > current_distance:
-            continue
-        if not next_hub.can_enter_hub():
-            continue
-
-        forward_path = has_forward_path(
-            graph, static_distances, next_hub, next_distance)
-        if next_hub != target_hub and not forward_path:
-            continue
-
-        ranked_candidates.append(
-            (next_distance, not forward_path, next_hub))
-
-    ranked_candidates.sort(key=lambda item: (item[0], item[1], item[2].name))
-    return [hub for _, _, hub in ranked_candidates]
+        ranked_candidates.sort()
+        res = [hub for _, hub in ranked_candidates]
+        return res
 
 
 def main() -> None:
@@ -90,13 +69,16 @@ def main() -> None:
         window.blit(text_surface, (50, 100))
 
     try:
-        hubs, connections, start_hub, target_hub, nb_drones = parsing()
+        (
+            hubs, connections, start_hub,
+            target_hub, nb_drones
+        ) = Parsing().parsing()
     except Exception as e:
         print(e)
         exit()
 
     graph = Graph(hubs, connections)
-    static_distances = build_static_distance_map(graph, target_hub)
+    static_distances = Solver.build_static_distance_map(graph, target_hub)
 
     # init the hub.position_on_window
     avg_x = sum(hub.x for hub in hubs) / len(hubs)
@@ -134,71 +116,52 @@ def main() -> None:
         arrived_this_turn: set[int] = set()
 
         for drone in drones:
-            if not drone.in_transit:
+            if not drone.in_transit or drone.reach_final_target:
                 continue
 
-            arrival_hub = drone.current_target
-            if arrival_hub is None:
-                drone.in_transit = False
-                continue
-
-            arrival_start = drone.corrent_position
-            arrival_end = arrival_hub.position_on_window
-            drone.corrent_hub = arrival_hub
-            drone.corrent_position = arrival_end
-            drone.current_target = arrival_hub
             drone.in_transit = False
-            turn_events.append(f"D{drone.id}-{arrival_hub.name}")
-            turn_movements.append((drone, arrival_start, arrival_end))
             arrived_this_turn.add(drone.id)
-
-            if arrival_hub == target_hub:
-                drone.reach_target = True
 
         for drone in drones:
             if (
-                drone.reach_target or
+                drone.reach_final_target or
                 drone.in_transit or
                 drone.id in arrived_this_turn
             ):
                 continue
-            ranked_candidates = rank_next_hubs(
-                graph, drone.corrent_hub, target_hub, static_distances)
-            if not ranked_candidates:
-                continue
 
-            next_hub = next(
-                (
-                    candidate_hub
-                    for candidate_hub in ranked_candidates[:3]
-                    if candidate_hub != drone.corrent_hub), None)
+            ranked_candidates = Solver.rank_next_hubs(
+                graph, drone.corrent_hub, static_distances)
+
+            next_hub = ranked_candidates[0] if ranked_candidates else None
 
             if next_hub is None:
                 continue
 
-            source_hub = drone.corrent_hub
-            start_position = source_hub.position_on_window
-            end_position = next_hub.position_on_window
+            if next_hub == target_hub:
+                drone.reach_final_target = True
 
-            source_hub.corrent_number_of_drones -= 1
+            drone.corrent_hub.corrent_number_of_drones -= 1
             next_hub.corrent_number_of_drones += 1
             drone.current_target = next_hub
-            drone.corrent_position = start_position
-            turn_movements.append((drone, start_position, end_position))
+
+            turn_movements.append(
+                (
+                    drone, drone.corrent_hub.position_on_window,
+                    next_hub.position_on_window
+                )
+            )
+            turn_events.append(f"D{drone.id}-{next_hub.name}")
 
             if next_hub.zone == "restricted":
                 drone.in_transit = True
-                turn_events.append(
-                    f"D{drone.id}-{source_hub.name}-{next_hub.name}")
-            else:
-                drone.corrent_hub = next_hub
-                turn_events.append(f"D{drone.id}-{next_hub.name}")
-                if next_hub == target_hub:
-                    drone.reach_target = True
+
+            drone.corrent_hub = next_hub
 
         if turn_events:
             turn += 1
             print(turn, " ".join(turn_events))
+
         Rendring.draw_turn(
             window, clock, connections, hubs, start_hub,
             target_hub, drones, write_text, f"turn = {turn}", turn_movements)

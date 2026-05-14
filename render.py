@@ -1,7 +1,7 @@
 import pygame
 from typing import Callable
 
-from draw_flags import draw_flags
+from draw_flags import Flags
 from classes import Hub, Drone
 from some_parameters import colors
 
@@ -61,7 +61,7 @@ class Rendring:
             turn_text: str,
             write_text: Callable[[pygame.surface.Surface, str], None]) -> None:
         window.fill(colors["background"])
-        draw_flags(window, start_hub, target_hub)
+        Flags.draw_flags(window, start_hub, target_hub)
         Rendring.draw_connections(window, connections, hubs)
         Rendring.draw_hubs(window, hubs)
         write_text(window, turn_text)
@@ -88,7 +88,7 @@ class Rendring:
             write_text: Callable[[pygame.surface.Surface, str], None],
             turn_text: str, movements: list[
                 tuple[Drone, tuple[float, float], tuple[float, float]]],
-            frames: int = 30) -> bool:
+            frames: int = 30) -> None:
 
         for frame in range(frames):
             for event in pygame.event.get():
@@ -113,5 +113,3 @@ class Rendring:
                 write_text
             )
             clock.tick(60)
-
-        return True

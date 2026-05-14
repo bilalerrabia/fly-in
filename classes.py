@@ -88,15 +88,15 @@ class Edge:
 class Drone:
 
     def __init__(self, start_hub: Hub, drone_id: int):
-        self.img_path = f"photos/{random.choice(os.listdir('photos'))}"
+        img_path = f"photos/{random.choice(os.listdir('photos'))}"
         self.img = pygame.transform.scale(
-            pygame.image.load(self.img_path), (70, 70))
+            pygame.image.load(img_path), (70, 70))
         self.id = drone_id
-        self.corrent_hub = start_hub
+        self.corrent_hub: Hub = start_hub
         self.corrent_position: tuple[float, float] = (0, 0)
         self.corrent_position = start_hub.position_on_window
         self.current_target: Hub | None = None
-        self.reach_target: bool = False
+        self.reach_final_target: bool = False
         self.in_transit: bool = False
 
     def show(
