@@ -1,11 +1,10 @@
 """Core graph, hub, edge, and drone models used by the simulation."""
 
-from __future__ import annotations
-
 import pygame
 import os
 import random
 from math import inf
+from typing import Any
 
 
 class Hub:
@@ -36,7 +35,7 @@ class Hub:
         }.get(zone, inf)
 
     @staticmethod
-    def get_hub(name: str, hubs: list[Hub]) -> Hub | None:
+    def get_hub(name: str, hubs: list[Any]) -> Any:
         """Return the hub with the requested name, if it exists."""
         return next((hub for hub in hubs if hub.name == name), None)
 
@@ -46,7 +45,7 @@ class Hub:
             self.zone != "blocked" and
             self.corrent_number_of_drones < self.max_drones)
 
-    def __lt__(self, other: Hub) -> bool:
+    def __lt__(self, other: Any) -> Any:
         """Order hubs by traversal cost for heap operations."""
         return self.cost < other.cost
 
@@ -86,7 +85,7 @@ class Edge:
         self.target: Hub = target
 
     @staticmethod
-    def is_there(name: str, list_edges: list[Edge]) -> bool:
+    def is_there(name: str, list_edges: list[Any]) -> bool:
         """Return True when the neighbor list already contains the hub."""
         return any(name == edge.target.name for edge in list_edges)
 
@@ -117,7 +116,6 @@ class Drone:
         self.corrent_hub: Hub = start_hub
         self.corrent_position: tuple[float, float] = (0, 0)
         self.corrent_position = start_hub.position_on_window
-        self.current_target: Hub | None = None
         self.reach_final_target: bool = False
         self.in_transit: bool = False
 

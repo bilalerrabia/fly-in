@@ -94,6 +94,10 @@ class Parsing:
                 meta_data_dict.get("max_drones", -1) == -1
         ):
             meta_data_dict["max_drones"] = str(nb_drones)
+        if data[1].find("-") != -1:
+            raise ParsingError(
+                "you can't use '-' on "
+                f"hub name (line = {counter})\n{line}")
 
         hub = Hub(
             name=data[1],
@@ -140,6 +144,16 @@ class Parsing:
                     f"['max_link_capacity'] (line = {counter})"
                     f"\n{line}"
                     )
+            else:
+                try:
+                    if int(meta_data_dict[meta_data]) <= 0:
+                        raise ParsingError(
+                            "invalid max_link_capacity "
+                            f"value (line = {counter})\n{line}")
+                except (ValueError, ParsingError):
+                    raise ParsingError(
+                            "invalid max_link_capacity "
+                            f"value (line = {counter})\n{line}")
         capacity = int(meta_data_dict.get("max_link_capacity", 1))
         return first, second, capacity
 

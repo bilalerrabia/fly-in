@@ -3,7 +3,7 @@ from heapq import heappop, heappush
 from math import inf
 from classes import Hub, Graph, Drone
 from render import Rendring
-from parsing import Parsing
+from parsing import Parsing, ParsingError
 from typing import Any
 
 
@@ -56,17 +56,16 @@ class Solver:
             ranked_candidates.append((next_distance, next_hub))
 
         ranked_candidates.sort()
-        res = [hub for _, hub in ranked_candidates]
-        return res
+        return [hub for _, hub in ranked_candidates]
 
 
 class WriteText:
 
     @staticmethod
     def write_text(window: pygame.surface.Surface, txt: str) -> None:
+        """Render a single status line on the top left window."""
         pygame.init()
         font = pygame.font.SysFont("", 32)
-        """Render a single status line on the top left window."""
         text_surface = font.render(txt, True, (255, 255, 255))
         window.blit(text_surface, (50, 100))
 
@@ -85,6 +84,13 @@ def main() -> None:
 
     graph = Graph(hubs, connections)
     static_distances = Solver.build_static_distance_map(graph, target_hub)
+    try:
+        if static_distances.get(start_hub) is None:
+            raise ParsingError(
+                "invalid map start_hub is not connected to end_hub :)")
+    except ParsingError as e:
+        print(e)
+        exit()
 
     # init the hub.position_on_window
     avg_x = sum(hub.x for hub in hubs) / len(hubs)
@@ -103,6 +109,7 @@ def main() -> None:
         Drone(start_hub, index + 1)
         for index in range(nb_drones)
         ]
+    start_hub.corrent_number_of_drones = nb_drones
 
     clock = pygame.time.Clock()
 
@@ -129,11 +136,7 @@ def main() -> None:
             arrived_this_turn.add(drone.id)
 
         for drone in drones:
-            if (
-                drone.reach_final_target or
-                drone.in_transit or
-                drone.id in arrived_this_turn
-            ):
+            if drone.id in arrived_this_turn:
                 continue
 
             ranked_candidates = Solver.rank_next_hubs(
@@ -149,7 +152,6 @@ def main() -> None:
 
             drone.corrent_hub.corrent_number_of_drones -= 1
             next_hub.corrent_number_of_drones += 1
-            drone.current_target = next_hub
 
             turn_movements.append(
                 (
@@ -173,7 +175,7 @@ def main() -> None:
             target_hub, drones, WriteText.write_text,
             f"turn = {turn}", turn_movements)
 
-    pygame.quit()
+    # pygame.quit()
 
 
 if __name__ == "__main__":
