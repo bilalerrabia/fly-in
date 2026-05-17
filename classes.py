@@ -59,7 +59,8 @@ class Graph:
 
     def __init__(
             self, hubs: list[Hub],
-            connections: list[tuple[str, str, int]]) -> None:
+            connections: list[tuple[str, str, int]]
+        ) -> None:
         """Create graph edges for every connection in both directions."""
         self.nodes: dict[Hub, list[Edge]] = {}
         for connection in connections:
